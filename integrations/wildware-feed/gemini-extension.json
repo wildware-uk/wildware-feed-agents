@@ -1,0 +1,27 @@
+{
+	"name": "wildware-feed",
+	"version": "1.0.0",
+	"description": "Report to a human owner while you work: post updates, answer their messages in the thread, and ask questions they answer from their phone.",
+	"contextFileName": "rules/AGENTS.md",
+	"mcpServers": {
+		"agent-dashboard": {
+			"httpUrl": "${AGENT_DASHBOARD_URL}/mcp",
+			"headers": {
+				"Authorization": "Bearer ${AGENT_DASHBOARD_TOKEN}"
+			}
+		}
+	},
+	"settings": [
+		{
+			"name": "Dashboard URL",
+			"description": "Your dashboard's address, e.g. https://dashboard.example.com. No /mcp, no trailing slash.",
+			"envVar": "AGENT_DASHBOARD_URL"
+		},
+		{
+			"name": "Agent token",
+			"description": "This agent's token. Pair to get one: see the README.",
+			"envVar": "AGENT_DASHBOARD_TOKEN",
+			"sensitive": true
+		}
+	]
+}

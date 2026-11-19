@@ -1,0 +1,20 @@
+{
+	"name": "wildware-feed",
+	"version": "1.0.0",
+	"description": "Report to a human owner while you work: post updates, answer their messages in the thread, and ask questions they answer from their phone.",
+	"author": {
+		"name": "Wildware",
+		"url": "https://github.com/wildware-uk"
+	},
+	"homepage": "https://feed.wildware.dev",
+	"repository": "https://github.com/wildware-uk/wildware-feed-agents",
+	"license": "MIT",
+	"keywords": [
+		"mcp",
+		"dashboard",
+		"status",
+		"human-in-the-loop",
+		"notifications"
+	],
+	"displayName": "Wildware Feed"
+}

@@ -1,0 +1,11 @@
+{
+	"mcpServers": {
+		"agent-dashboard": {
+			"type": "http",
+			"url": "https://dashboard.example.com/mcp",
+			"headers": {
+				"Authorization": "Bearer ${AGENT_DASHBOARD_TOKEN}"
+			}
+		}
+	}
+}

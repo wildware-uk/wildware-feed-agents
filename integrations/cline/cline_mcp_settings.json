@@ -1,0 +1,13 @@
+{
+	"mcpServers": {
+		"agent-dashboard": {
+			"type": "streamableHttp",
+			"url": "https://dashboard.example.com/mcp",
+			"headers": {
+				"Authorization": "Bearer <your agent token>"
+			},
+			"disabled": false,
+			"autoApprove": []
+		}
+	}
+}

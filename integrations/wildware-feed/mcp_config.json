@@ -1,0 +1,23 @@
+{
+	"mcpServers": {
+		"agent-dashboard": {
+			"url": "${AGENT_DASHBOARD_URL}/mcp",
+			"headers": {
+				"Authorization": "Bearer ${AGENT_DASHBOARD_TOKEN}"
+			},
+			"variables": [
+				{
+					"name": "AGENT_DASHBOARD_URL",
+					"title": "Dashboard URL",
+					"description": "Your dashboard's address, e.g. https://dashboard.example.com. No /mcp, no trailing slash."
+				},
+				{
+					"name": "AGENT_DASHBOARD_TOKEN",
+					"title": "Agent token",
+					"description": "This agent's token. Pair to get one: see the README.",
+					"link": "https://github.com/wildware-uk/wildware-feed-agents/tree/main/integrations#get-a-token"
+				}
+			]
+		}
+	}
+}

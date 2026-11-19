@@ -1,0 +1,19 @@
+{
+	"inputs": [
+		{
+			"type": "promptString",
+			"id": "agent-dashboard-token",
+			"description": "Wildware Feed agent token",
+			"password": true
+		}
+	],
+	"servers": {
+		"agent-dashboard": {
+			"type": "http",
+			"url": "https://dashboard.example.com/mcp",
+			"headers": {
+				"Authorization": "Bearer ${input:agent-dashboard-token}"
+			}
+		}
+	}
+}

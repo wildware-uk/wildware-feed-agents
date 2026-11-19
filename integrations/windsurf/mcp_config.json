@@ -1,0 +1,10 @@
+{
+	"mcpServers": {
+		"agent-dashboard": {
+			"serverUrl": "https://dashboard.example.com/mcp",
+			"headers": {
+				"Authorization": "Bearer ${env:AGENT_DASHBOARD_TOKEN}"
+			}
+		}
+	}
+}

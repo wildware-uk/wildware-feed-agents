@@ -1,0 +1,17 @@
+{
+	"mcpServers": {
+		"agent-dashboard": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"mcp-remote@0.16.0",
+				"https://dashboard.example.com/mcp",
+				"--header",
+				"Authorization:${AUTH_HEADER}"
+			],
+			"env": {
+				"AUTH_HEADER": "Bearer <your agent token>"
+			}
+		}
+	}
+}
