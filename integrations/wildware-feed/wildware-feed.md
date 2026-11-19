@@ -213,9 +213,10 @@ Dashboard URL: the one the owner gave you, else `AGENT_DASHBOARD_URL`.
 2. Tell the owner the `code` it returned, in your reply: "Allow `laptop-personal` in your
    Wildware Feed app. The code is K7Q2." Keep `pairing_id` and `poll_secret` to yourself.
 3. Wait for their decision. Each call waits up to 25 seconds; repeat while `state` is
-   `pending`. The request expires after 10 minutes. Let each call run to the end: one cut
-   short can still collect the token, which is then lost. This keeps the answer in a file
-   and prints only the state, so the token never shows in the chat:
+   `pending`. The request expires after 10 minutes. Let each call run to the end. If one
+   is cut short anyway, poll again with the same secret: the token comes back until it is
+   first used. This keeps the answer in a file and prints only the state, so the token
+   never shows in the chat:
 
    ```sh
    D=~/.config/wildware-feed; mkdir -p "$D" && chmod 700 "$D"
@@ -223,7 +224,7 @@ Dashboard URL: the one the owner gave you, else `AGENT_DASHBOARD_URL`.
    jq -r .state "$D/answer.json"
    ```
 
-4. When it says `approved`, the answer holds the token, once. Keep it, then connect the
+4. When it says `approved`, the answer holds the token. Keep it, then connect the
    client (below) and call `register_session`:
 
    ```sh

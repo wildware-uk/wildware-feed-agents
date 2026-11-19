@@ -6,7 +6,7 @@ Each agent signs in with its own token. Pick one way to get it:
 - **Let the agent pair itself.** Install the skills, then tell it "connect yourself to the
   dashboard at https://dashboard.example.com as laptop-personal". It asks to join, you tap
   Allow in the Wildware Feed app, and it saves the token to `~/.config/wildware-feed/token`.
-- **Pair by hand.** Ask to join, allow it in the app, then collect the token (once):
+- **Pair by hand.** Ask to join, allow it in the app, then collect the token:
 
   ```sh
   curl -s https://dashboard.example.com/api/pair -H 'Content-Type: application/json' \
