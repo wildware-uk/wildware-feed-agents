@@ -28,9 +28,9 @@
 		},
 		"projects": {
 			"type": "string",
-			"title": "Projects to hear about",
-			"description": "Comma-separated project slugs this machine's sessions should be woken for, e.g. `website,api`, or `*` for every project.",
-			"required": true
+			"title": "Projects to hear about (optional)",
+			"description": "Leave empty: the dashboard keeps what each agent follows. Set comma-separated project slugs, e.g. `website,api`, or `*`, only to name them yourself.",
+			"required": false
 		},
 		"agent_token": {
 			"type": "string",

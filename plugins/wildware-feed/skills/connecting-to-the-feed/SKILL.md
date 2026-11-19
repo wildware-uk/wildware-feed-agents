@@ -46,7 +46,7 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/feed.mjs" status --data "${CLAUDE_PLUGIN_DATA}"
 
 ## When the plugin is not set up
 
-- No dashboard URL: the owner sets `dashboard_url` (and `projects`, or `*`) with
+- No dashboard URL: the owner sets `dashboard_url` with
   `/plugin` → Wildware Feed → Configure, then restarts.
 - Install: `/plugin marketplace add wildware-uk/wildware-feed-agents`, then
   `/plugin install wildware-feed@wildware-feed`.

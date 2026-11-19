@@ -17067,10 +17067,9 @@ var INSTRUCTIONS = [
   "  await_request re-reads the row when you want the typed value in full. A state of",
   '  "timeout" or "cancelled" is not permission: it means nobody answered.',
   "",
-  "You are only told about projects this session is subscribed to, so anything that arrives",
-  "is your business. The exception is a message that names you with @your-name: it reaches",
-  "you wherever it was written, and only the agents it names hear it. Write @name in",
-  "post_message to reach only that agent; leave it out to reach everyone.",
+  "The server keeps what you follow. Posting in a project or thread follows it, and an",
+  "@mention follows that thread for you. Call subscribe / unsubscribe when you take on or",
+  "finish something, and list_subscriptions to see what you follow.",
   "",
   "These are one-way notifications: there is no reply tool on this channel, and nothing is",
   "expected back through it. A count that drops to zero means the work is done or was",
@@ -17444,13 +17443,6 @@ async function main(env2 = process.env, token = () => env2.AGENT_DASHBOARD_TOKEN
   const projects = (env2.AGENT_DASHBOARD_PROJECTS ?? "").split(",").map((project) => project.trim()).filter((project) => project !== "");
   if (!baseUrl) {
     process.stderr.write("agent-dashboard channel: set AGENT_DASHBOARD_URL (the plugin's dashboard_url)\n");
-    process.exitCode = 1;
-    return;
-  }
-  if (projects.length === 0) {
-    process.stderr.write(
-      "agent-dashboard channel: set AGENT_DASHBOARD_PROJECTS to the project slugs this session is for, comma separated \u2014 or to * for every project. It is required: there is no default scope.\n"
-    );
     process.exitCode = 1;
     return;
   }

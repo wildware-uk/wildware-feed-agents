@@ -409,6 +409,26 @@ describe('pushing into the session', () => {
 		expect(asked.searchParams.getAll('project')).toEqual(['gardengame-mod-engine', 'garden-game']);
 	});
 
+	it('names no project when none were set, so the server sends what the agent follows', async () => {
+		const notify = vi.fn().mockResolvedValue(undefined);
+		const abort = new AbortController();
+		const fetcher = vi.fn().mockResolvedValue(new Response(sse(workFrame({})), { status: 200 }));
+
+		await runBridge({
+			baseUrl: 'https://dash.test',
+			token: 'a-token',
+			projects: [],
+			fetch: fetcher as unknown as typeof globalThis.fetch,
+			notify,
+			sleep: async () => abort.abort(),
+			signal: abort.signal
+		});
+
+		const asked = new URL(fetcher.mock.calls[0]?.[0] as string);
+		expect(asked.searchParams.has('project')).toBe(false);
+		expect(asked.searchParams.get('client')).toBeTruthy();
+	});
+
 	it('sends the agent its token and asks for the stream', async () => {
 		const { fetcher } = await bridge(sse(workFrame({})));
 
@@ -494,13 +514,8 @@ describe('pushing into the session', () => {
 });
 
 /**
- * Starting up: what the bridge refuses to guess.
- *
- * `AGENT_DASHBOARD_PROJECTS` used to be optional, and an unset one meant "work
- * it out from what this agent has done" — which made the commonest
- * configuration the one nobody had chosen, and let a session's scope accumulate
- * out of its own history rather than being decided by whoever set it up. It is
- * now required, and `*` is how you say "all of them" on purpose.
+ * Starting up. `AGENT_DASHBOARD_PROJECTS` is optional: unset, the server decides what
+ * this agent hears from what it follows. Only the URL is required.
  */
 describe('what main needs before it will start', () => {
 	function stderr() {
@@ -530,38 +545,8 @@ describe('what main needs before it will start', () => {
 		}
 	}
 
-	it('refuses to start with no subscription, and says which variable', async () => {
-		const { said, exitCode } = await start({
-			AGENT_DASHBOARD_URL: 'https://dash.test',
-			AGENT_DASHBOARD_TOKEN: 'a-token'
-		});
-
-		expect(said).toContain('AGENT_DASHBOARD_PROJECTS');
-		expect(exitCode).toBe(1);
-	});
-
-	it('treats an empty subscription as no subscription, rather than as everything', async () => {
-		const { said, exitCode } = await start({
-			AGENT_DASHBOARD_URL: 'https://dash.test',
-			AGENT_DASHBOARD_TOKEN: 'a-token',
-			AGENT_DASHBOARD_PROJECTS: '  ,  '
-		});
-
-		expect(said).toContain('AGENT_DASHBOARD_PROJECTS');
-		expect(exitCode).toBe(1);
-	});
-
-	it('says how to ask for every project, because that is the case it refuses', async () => {
-		const { said } = await start({
-			AGENT_DASHBOARD_URL: 'https://dash.test',
-			AGENT_DASHBOARD_TOKEN: 'a-token'
-		});
-
-		expect(said).toContain('*');
-	});
-
 	it('still refuses a missing URL first', async () => {
-		const { said, exitCode } = await start({ AGENT_DASHBOARD_PROJECTS: '*' });
+		const { said, exitCode } = await start({});
 
 		expect(said).toContain('AGENT_DASHBOARD_URL');
 		expect(exitCode).toBe(1);

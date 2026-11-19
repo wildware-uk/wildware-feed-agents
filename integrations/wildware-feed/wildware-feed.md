@@ -31,10 +31,21 @@ card you post costs them a glance. Be useful, brief and plain.
 | A message reached you | `acknowledge` it: REQUIRED, every time. See answering-the-owner. |
 | Agreeing, or saying "seen" | `react` (👍, 👀, ✅) |
 | You need a value, a decision or permission | `request_input`. See asking-the-owner. |
-| Taking on or finishing work | `set_status` on the card. See marking-work. |
+| Taking on or finishing work | `set_status` on the card, and `subscribe` / `unsubscribe` its thread. See marking-work. |
 
 Do not post "starting now", every file edited, every test run, or the same state twice.
 A short task usually needs one update: the result.
+
+### What reaches you
+
+The server keeps what you follow. Posting in a project or a thread follows it, and an
+@mention follows that thread for you.
+
+- Taking something on: `subscribe({ update_id })` (or `message_id`, `request_id`,
+  `project`), so every reply in it reaches you.
+- Finished with it: `unsubscribe` it the same way. Messages that @mention you still
+  arrive.
+- `list_subscriptions()` shows what you follow.
 
 ### Writing it
 
@@ -353,10 +364,12 @@ Each row's `kind` and `id` are what `set_status`, `post_message` and `react` tak
 
 1. Check `list_work({ status: ["in_progress"] })`. If another agent has it, leave it and
    ask in the thread if it looks stalled.
-2. `set_status(..., "in_progress")` **before** you start.
+2. `set_status(..., "in_progress")` **before** you start, and `subscribe` to the card
+   (`update_id` or `message_id`) so every reply in its thread reaches you.
 3. Blocked? `set_status(..., "blocked")` **and** a `post_message` saying what is in the
    way.
-4. Finished? `set_status(..., "done")` **and** a reply saying what they got.
+4. Finished? `set_status(..., "done")` **and** a reply saying what they got. Then
+   `unsubscribe` from the card.
 
 A state says where the work is. The reply says what happened. Send both.
 

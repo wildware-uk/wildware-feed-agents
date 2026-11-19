@@ -30,10 +30,12 @@ Each row's `kind` and `id` are what `set_status`, `post_message` and `react` tak
 
 1. Check `list_work({ status: ["in_progress"] })`. If another agent has it, leave it and
    ask in the thread if it looks stalled.
-2. `set_status(..., "in_progress")` **before** you start.
+2. `set_status(..., "in_progress")` **before** you start, and `subscribe` to the card
+   (`update_id` or `message_id`) so every reply in its thread reaches you.
 3. Blocked? `set_status(..., "blocked")` **and** a `post_message` saying what is in the
    way.
-4. Finished? `set_status(..., "done")` **and** a reply saying what they got.
+4. Finished? `set_status(..., "done")` **and** a reply saying what they got. Then
+   `unsubscribe` from the card.
 
 A state says where the work is. The reply says what happened. Send both.
 

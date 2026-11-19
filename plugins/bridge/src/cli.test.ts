@@ -70,13 +70,20 @@ describe('the header helper', () => {
 });
 
 describe('what the monitor connects with', () => {
-	it('waits for a URL, a subscription and a token', () => {
+	it('waits for a URL and a token, and passes on projects only when the owner named them', () => {
 		const s = store();
 		expect(connection(s, {})).toBeNull();
 		sessionStart(s, { CLAUDE_PLUGIN_OPTION_DASHBOARD_URL: URL_, CLAUDE_PLUGIN_OPTION_PROJECTS: 'app, web' });
 		expect(connection(s, {})).toBeNull();
 		pair(s);
 		expect(connection(s, {})).toEqual({ url: URL_, token: 'paired-token', projects: ['app', 'web'], monitor: 'auto' });
+	});
+
+	it('needs no projects: the server keeps what the agent follows', () => {
+		const s = store();
+		sessionStart(s, { CLAUDE_PLUGIN_OPTION_DASHBOARD_URL: URL_ });
+		pair(s);
+		expect(connection(s, {})).toEqual({ url: URL_, token: 'paired-token', projects: [], monitor: 'auto' });
 	});
 
 	it('keys the channel claim to the project', () => {

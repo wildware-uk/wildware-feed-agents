@@ -28,10 +28,21 @@ card you post costs them a glance. Be useful, brief and plain.
 | A message reached you | `acknowledge` it: REQUIRED, every time. See answering-the-owner. |
 | Agreeing, or saying "seen" | `react` (👍, 👀, ✅) |
 | You need a value, a decision or permission | `request_input`. See asking-the-owner. |
-| Taking on or finishing work | `set_status` on the card. See marking-work. |
+| Taking on or finishing work | `set_status` on the card, and `subscribe` / `unsubscribe` its thread. See marking-work. |
 
 Do not post "starting now", every file edited, every test run, or the same state twice.
 A short task usually needs one update: the result.
+
+## What reaches you
+
+The server keeps what you follow. Posting in a project or a thread follows it, and an
+@mention follows that thread for you.
+
+- Taking something on: `subscribe({ update_id })` (or `message_id`, `request_id`,
+  `project`), so every reply in it reaches you.
+- Finished with it: `unsubscribe` it the same way. Messages that @mention you still
+  arrive.
+- `list_subscriptions()` shows what you follow.
 
 ## Writing it
 

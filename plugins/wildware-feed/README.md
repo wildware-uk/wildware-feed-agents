@@ -12,12 +12,12 @@ In Claude Code:
 /plugin install wildware-feed@wildware-feed
 ```
 
-It asks for two things:
+It asks for these:
 
 | Setting | What to put |
 | --- | --- |
 | `dashboard_url` | Your dashboard's address, e.g. `https://dashboard.example.com`. No `/mcp`. |
-| `projects` | The project slugs this machine's sessions should be woken for, comma separated, or `*` for all. |
+| `projects` | Optional. Leave it empty: the dashboard keeps what each agent follows. Set comma-separated slugs, or `*` for all, only to name them yourself. |
 
 Leave `agent_token` empty. Restart Claude Code.
 

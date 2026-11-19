@@ -345,10 +345,9 @@ var INSTRUCTIONS = [
   "  await_request re-reads the row when you want the typed value in full. A state of",
   '  "timeout" or "cancelled" is not permission: it means nobody answered.',
   "",
-  "You are only told about projects this session is subscribed to, so anything that arrives",
-  "is your business. The exception is a message that names you with @your-name: it reaches",
-  "you wherever it was written, and only the agents it names hear it. Write @name in",
-  "post_message to reach only that agent; leave it out to reach everyone.",
+  "The server keeps what you follow. Posting in a project or thread follows it, and an",
+  "@mention follows that thread for you. Call subscribe / unsubscribe when you take on or",
+  "finish something, and list_subscriptions to see what you follow.",
   "",
   "These are one-way notifications: there is no reply tool on this channel, and nothing is",
   "expected back through it. A count that drops to zero means the work is done or was",
@@ -774,7 +773,7 @@ function connection(store, env) {
   const url = env.AGENT_DASHBOARD_URL?.trim() || saved?.url;
   const projects = (env.AGENT_DASHBOARD_PROJECTS?.trim() || saved?.projects || "").split(",").map((p) => p.trim()).filter(Boolean);
   const monitor2 = (env.AGENT_DASHBOARD_MONITOR ?? saved?.monitor ?? "auto").toLowerCase() === "off" ? "off" : "auto";
-  if (!url || projects.length === 0) return null;
+  if (!url) return null;
   const token = store.resolve(env, url);
   if (!token) return null;
   return { url, token: token.token, projects, monitor: monitor2 };
@@ -826,7 +825,7 @@ async function monitor(store, env) {
       const settings = readSettings(store);
       if (settings?.url) {
         process.stdout.write(
-          settings.projects ? "agent-dashboard monitor: waiting \u2014 this project is not paired yet, so nothing will arrive from the dashboard until it is.\n" : "agent-dashboard monitor: not configured \u2014 set projects under /plugin (or * for every project), then restart the session.\n"
+          "agent-dashboard monitor: waiting \u2014 this project is not paired yet, so nothing will arrive from the dashboard until it is.\n"
         );
       }
     }

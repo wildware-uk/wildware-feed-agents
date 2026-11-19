@@ -95,7 +95,7 @@ export function connection(store: Store, env: NodeJS.ProcessEnv): { url: string;
 		.map((p) => p.trim())
 		.filter(Boolean);
 	const monitor = (env.AGENT_DASHBOARD_MONITOR ?? saved?.monitor ?? 'auto').toLowerCase() === 'off' ? 'off' : 'auto';
-	if (!url || projects.length === 0) return null;
+	if (!url) return null;
 	const token = store.resolve(env, url);
 	if (!token) return null;
 	return { url, token: token.token, projects, monitor };
@@ -157,9 +157,7 @@ async function monitor(store: Store, env: NodeJS.ProcessEnv): Promise<void> {
 			// Silent when there is no URL at all: the plugin is installed, not set up.
 			if (settings?.url) {
 				process.stdout.write(
-					settings.projects
-						? 'agent-dashboard monitor: waiting — this project is not paired yet, so nothing will arrive from the dashboard until it is.\n'
-						: 'agent-dashboard monitor: not configured — set projects under /plugin (or * for every project), then restart the session.\n'
+					'agent-dashboard monitor: waiting — this project is not paired yet, so nothing will arrive from the dashboard until it is.\n'
 				);
 			}
 		}

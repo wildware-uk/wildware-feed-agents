@@ -9,8 +9,7 @@
 			"command": "node",
 			"args": ["${CLAUDE_PLUGIN_ROOT}/bin/channel.mjs", "--data", "${CLAUDE_PLUGIN_DATA}"],
 			"env": {
-				"AGENT_DASHBOARD_URL": "${user_config.dashboard_url}",
-				"AGENT_DASHBOARD_PROJECTS": "${user_config.projects}"
+				"AGENT_DASHBOARD_URL": "${user_config.dashboard_url}"
 			}
 		}
 	}

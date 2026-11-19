@@ -214,10 +214,9 @@ export const INSTRUCTIONS = [
 	'  await_request re-reads the row when you want the typed value in full. A state of',
 	'  "timeout" or "cancelled" is not permission: it means nobody answered.',
 	'',
-	'You are only told about projects this session is subscribed to, so anything that arrives',
-	'is your business. The exception is a message that names you with @your-name: it reaches',
-	'you wherever it was written, and only the agents it names hear it. Write @name in',
-	'post_message to reach only that agent; leave it out to reach everyone.',
+	'The server keeps what you follow. Posting in a project or thread follows it, and an',
+	'@mention follows that thread for you. Call subscribe / unsubscribe when you take on or',
+	'finish something, and list_subscriptions to see what you follow.',
 	'',
 	'These are one-way notifications: there is no reply tool on this channel, and nothing is',
 	'expected back through it. A count that drops to zero means the work is done or was',
@@ -276,18 +275,10 @@ export type BridgeOptions = {
 	/** The agent's bearer token — the same one its MCP config uses. */
 	token: string;
 	/**
-	 * Which projects this session is for. Required, and never inferred.
-	 *
-	 * The answer to an agent hearing about work that is none of its business: a
-	 * gardengame session subscribes to gardengame and is deaf to everything else,
-	 * however many projects the token has touched over its life.
-	 *
-	 * `['*']` is the way to say "every project", and it has to be typed. The
-	 * bridge used to treat an unset variable as that, by deriving relevance from
-	 * what the agent had done — which meant the commonest configuration was the
-	 * one nobody had chosen, and an agent's scope was decided by its own history
-	 * rather than by whoever set the session up. {@link main} now refuses to start
-	 * without it.
+	 * Which projects this session is for, when the owner named them. Empty is the
+	 * usual case: the stream then carries no `project` parameter, and the server
+	 * sends what this agent follows (subscribe, posting, @mentions), read afresh
+	 * on every event. `['*']` asks for every project.
 	 */
 	projects: readonly string[];
 	/**

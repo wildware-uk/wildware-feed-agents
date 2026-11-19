@@ -31,8 +31,9 @@ export async function main(
 	waitMs = 5_000
 ): Promise<void> {
 	const baseUrl = env.AGENT_DASHBOARD_URL?.trim();
-	// Comma separated, so one env var covers a session that works across two
-	// projects without inventing a list format nobody would remember.
+	// Optional. Unset, the server decides what this agent hears from what it
+	// follows (subscribe, posting, @mentions). Set, comma separated, it names the
+	// projects instead; `*` is every project.
 	const projects = (env.AGENT_DASHBOARD_PROJECTS ?? '')
 		.split(',')
 		.map((project) => project.trim())
@@ -42,20 +43,6 @@ export async function main(
 		// stderr, never stdout: stdout is the MCP transport, and a stray line on it
 		// is a protocol error rather than a message anybody reads.
 		process.stderr.write('agent-dashboard channel: set AGENT_DASHBOARD_URL (the plugin\'s dashboard_url)\n');
-		process.exitCode = 1;
-		return;
-	}
-
-	// Refused rather than defaulted. An unset subscription used to mean "work it
-	// out from what this agent has done", which made the commonest configuration
-	// the one nobody had chosen. Saying so costs one line of config and is the
-	// difference between a scope somebody decided and a scope that accumulated.
-	if (projects.length === 0) {
-		process.stderr.write(
-			'agent-dashboard channel: set AGENT_DASHBOARD_PROJECTS to the project slugs this ' +
-				'session is for, comma separated — or to * for every project. It is required: ' +
-				'there is no default scope.\n'
-		);
 		process.exitCode = 1;
 		return;
 	}
