@@ -1,0 +1,55 @@
+{
+	"name": "wildware-feed",
+	"displayName": "Wildware Feed",
+	"version": "1.0.0",
+	"description": "Report to a human owner while you work: post updates, answer their messages in the thread, ask questions they answer from their phone, and hear replies the moment they land.",
+	"author": {
+		"name": "Wildware",
+		"url": "https://github.com/wildware-uk"
+	},
+	"homepage": "https://feed.wildware.dev",
+	"repository": "https://github.com/wildware-uk/wildware-feed-agents",
+	"privacyPolicyUrl": "https://github.com/wildware-uk/wildware-feed/blob/master/PRIVACY.md",
+	"license": "MIT",
+	"keywords": [
+		"mcp",
+		"channel",
+		"dashboard",
+		"status",
+		"human-in-the-loop",
+		"notifications"
+	],
+	"userConfig": {
+		"dashboard_url": {
+			"type": "string",
+			"title": "Dashboard URL",
+			"description": "Your dashboard's address, e.g. https://dashboard.example.com. Just the origin: no /mcp, no trailing slash.",
+			"required": true
+		},
+		"projects": {
+			"type": "string",
+			"title": "Projects to hear about",
+			"description": "Comma-separated project slugs this machine's sessions should be woken for, e.g. `website,api`, or `*` for every project.",
+			"required": true
+		},
+		"agent_token": {
+			"type": "string",
+			"title": "Agent token (optional)",
+			"description": "Leave empty: each project pairs itself with your approval and gets its own token. Paste one only to use a single agent for every project on this machine.",
+			"sensitive": true,
+			"required": false
+		},
+		"monitor": {
+			"type": "string",
+			"title": "Background monitor",
+			"description": "`auto` (default) runs a background monitor so replies arrive without the channel flag. `off` turns it off.",
+			"required": false
+		}
+	},
+	"channels": [
+		{
+			"server": "agent-dashboard-channel",
+			"displayName": "Wildware Feed"
+		}
+	]
+}

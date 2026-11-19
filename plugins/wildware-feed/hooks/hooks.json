@@ -1,0 +1,15 @@
+{
+	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/feed.mjs\" session-start --data \"${CLAUDE_PLUGIN_DATA}\" --project \"${CLAUDE_PROJECT_DIR}\"",
+						"timeout": 10
+					}
+				]
+			}
+		]
+	}
+}

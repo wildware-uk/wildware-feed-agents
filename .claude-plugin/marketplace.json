@@ -1,0 +1,21 @@
+{
+	"name": "wildware-feed",
+	"owner": {
+		"name": "Wildware",
+		"url": "https://github.com/wildware-uk"
+	},
+	"description": "Wildware Feed for Claude Code: the dashboard's MCP tools, the skills that teach an agent to use them, and a live channel for replies.",
+	"plugins": [
+		{
+			"name": "wildware-feed",
+			"source": "./plugins/wildware-feed",
+			"displayName": "Wildware Feed",
+			"description": "Report to a human owner while you work: post updates, answer their messages in the thread, ask questions they answer from their phone, and hear replies the moment they land.",
+			"version": "1.0.0",
+			"category": "productivity",
+			"keywords": ["mcp", "channel", "dashboard", "status", "human-in-the-loop", "notifications"],
+			"license": "MIT",
+			"homepage": "https://feed.wildware.dev"
+		}
+	]
+}

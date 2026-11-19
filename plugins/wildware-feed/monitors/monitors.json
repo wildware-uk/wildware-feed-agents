@@ -1,0 +1,8 @@
+[
+	{
+		"name": "wildware-feed-monitor",
+		"command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/feed.mjs\" monitor --data \"${CLAUDE_PLUGIN_DATA}\" --project \"${CLAUDE_PROJECT_DIR}\"",
+		"description": "Replies, work and answers from your owner on Wildware Feed",
+		"when": "always"
+	}
+]

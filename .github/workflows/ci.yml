@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # The skills name the server's tools, and the server lives in wildware-uk/wildware-feed.
+  # A daily run catches a tool renamed there even when nothing changes here.
+  schedule:
+    - cron: '17 6 * * *'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        timeout-minutes: 2
+      - uses: actions/setup-node@v4
+        timeout-minutes: 2
+        with:
+          node-version: 22
+      - name: Install
+        timeout-minutes: 3
+        working-directory: plugins/bridge
+        run: npm ci --no-audit --no-fund
+      # Checks the scripts, the committed bin/*.mjs against their source, and the skills
+      # against the tools on wildware-feed's master branch.
+      - name: Test
+        timeout-minutes: 3
+        working-directory: plugins/bridge
+        run: npm test

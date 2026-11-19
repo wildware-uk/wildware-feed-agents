@@ -1,0 +1,22 @@
+{
+	"name": "wildware-feed-bridge",
+	"private": true,
+	"description": "Source of the Wildware Feed plugin's bundled script: the channel, the monitor, pairing and the token helper.",
+	"type": "module",
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"build": "node build.mjs",
+		"test": "vitest run",
+		"check": "node build.mjs --check"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "1.30.0"
+	},
+	"devDependencies": {
+		"@types/node": "24.13.3",
+		"esbuild": "0.28.2",
+		"vitest": "4.1.11"
+	}
+}

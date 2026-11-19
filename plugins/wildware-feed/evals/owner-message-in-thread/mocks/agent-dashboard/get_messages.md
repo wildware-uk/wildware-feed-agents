@@ -1,0 +1,2 @@
+1 new message, oldest first.
+{"messages": [{"id": "01JMSGOWNER000000000000001", "project_id": "01JPROJWEBSITE000000000001", "update_id": "01JUPDOLD000000000000000001", "reply_to": null, "author": "human", "body": "can you add a NOTES.md here that just says \"Release 2.0 ships Friday\"? Tell me when it's done.", "created_at": "2026-11-19T10:00:00Z"}], "count": 1, "cursor": "c1", "unread": 0, "marked_read": 1}
