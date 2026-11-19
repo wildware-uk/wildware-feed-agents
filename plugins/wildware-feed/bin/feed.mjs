@@ -5,7 +5,7 @@ const require = __feedRequire(import.meta.url);
 
 // src/cli.ts
 import { parseArgs } from "node:util";
-import { readFileSync as readFileSync3 } from "node:fs";
+import { readFileSync as readFileSync4 } from "node:fs";
 
 // src/store.ts
 import { createHash } from "node:crypto";
@@ -720,6 +720,98 @@ async function runMonitor(options) {
   });
 }
 
+// src/secret.ts
+import { existsSync, readFileSync as readFileSync3, renameSync, rmSync as rmSync2, writeFileSync as writeFileSync3 } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { basename, dirname as dirname2, join as join3 } from "node:path";
+var ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+async function tool(url, token, name, args, io) {
+  const fetch = io.fetch ?? globalThis.fetch;
+  const response = await fetch(`${origin(url)}/mcp`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json, text/event-stream",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } })
+  });
+  if (response.status === 401) throw new Error("the dashboard refused this project's token: pair again, or check AGENT_DASHBOARD_TOKEN");
+  if (!response.ok) throw new Error(`the dashboard said ${response.status}`);
+  const body = await response.json();
+  if (body.error) throw new Error(body.error.message ?? "the dashboard refused the call");
+  const result = body.result ?? {};
+  const data = result.structuredContent ?? {};
+  if (result.isError) {
+    const why = typeof data.message === "string" ? data.message : result.content?.[0]?.text ?? "refused";
+    throw new Error(why);
+  }
+  return data;
+}
+function writePrivate(path, bytes) {
+  const temp = join3(dirname2(path), `.${basename(path)}.${randomBytes(6).toString("hex")}.tmp`);
+  try {
+    writeFileSync3(temp, bytes, { mode: 384, flag: "wx" });
+    renameSync(temp, path);
+  } catch (e) {
+    rmSync2(temp, { force: true });
+    throw e;
+  }
+}
+var BARE = /^[A-Za-z0-9_./+=:@,%~-]*$/;
+function envValue(value) {
+  if (BARE.test(value)) return value;
+  if (/['\r\n\0]/.test(value)) throw new Error("it holds a quote or a line break, so it can't go in an env file safely: use --to <file>");
+  return `'${value}'`;
+}
+function withEnvLine(file, variable, value) {
+  const line = `${variable}=${envValue(value)}`;
+  const lines = file.length ? file.replace(/\n$/, "").split("\n") : [];
+  const at = lines.findIndex((l) => l.replace(/^export\s+/, "").startsWith(`${variable}=`));
+  if (at >= 0) lines[at] = line;
+  else lines.push(line);
+  return `${lines.join("\n")}
+`;
+}
+async function getSecret(options, io = {}) {
+  const { to, envFile } = options;
+  if ((to ? 1 : 0) + (envFile ? 1 : 0) !== 1) throw new Error("say where it goes: --to <file> or --env-file <file>");
+  const variable = options.as ?? options.name;
+  if (envFile && !ENV_NAME.test(variable)) throw new Error(`${variable} is not an environment variable name: pass --as NAME`);
+  const grant = await tool(options.url, options.token, "secret_url", { name: options.name }, io);
+  if (typeof grant.url !== "string") throw new Error("the dashboard gave no link");
+  const fetch = io.fetch ?? globalThis.fetch;
+  const response = await fetch(grant.url);
+  if (!response.ok) throw new Error(`the link was refused (${response.status}): run this again for a fresh one`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (to) {
+    writePrivate(to, bytes);
+    return `saved ${options.name} to ${to} (${bytes.length} bytes)`;
+  }
+  let value;
+  try {
+    value = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(`${options.name} is not text, so it can't go in an env file: use --to <file>`);
+  }
+  if (/[\r\n]/.test(value)) throw new Error(`${options.name} has more than one line, so it can't go in an env file: use --to <file>`);
+  const before = existsSync(envFile) ? readFileSync3(envFile, "utf8") : "";
+  writePrivate(envFile, withEnvLine(before, variable, value));
+  return `saved ${options.name} as ${variable} in ${envFile} (${bytes.length} bytes)`;
+}
+async function putSecret(options, io = {}) {
+  const bytes = readFileSync3(options.from);
+  if (bytes.length === 0) throw new Error(`${options.from} is empty`);
+  const args = { name: options.name };
+  if (options.note) args.note = options.note;
+  const grant = await tool(options.url, options.token, "create_secret_upload", args, io);
+  if (typeof grant.upload_url !== "string") throw new Error("the dashboard gave no upload link");
+  const fetch = io.fetch ?? globalThis.fetch;
+  const response = await fetch(grant.upload_url, { method: "PUT", headers: { "Content-Type": "application/octet-stream" }, body: bytes });
+  if (!response.ok) throw new Error(`the upload was refused (${response.status})`);
+  return `saved ${options.name} on the dashboard (${bytes.length} bytes)`;
+}
+
 // src/cli.ts
 function settingsFrom(env) {
   const pick = (option, fallback) => env[`CLAUDE_PLUGIN_OPTION_${option}`]?.trim() || env[fallback]?.trim() || "";
@@ -729,7 +821,7 @@ function settingsFrom(env) {
 }
 function readSettings(store) {
   try {
-    const parsed = JSON.parse(readFileSync3(store.connectionPath, "utf8"));
+    const parsed = JSON.parse(readFileSync4(store.connectionPath, "utf8"));
     return {
       url: typeof parsed.url === "string" ? parsed.url : null,
       projects: typeof parsed.projects === "string" ? parsed.projects : "",
@@ -841,7 +933,12 @@ async function run(argv, env = process.env) {
       project: { type: "string" },
       url: { type: "string" },
       name: { type: "string" },
-      force: { type: "boolean" }
+      force: { type: "boolean" },
+      to: { type: "string" },
+      "env-file": { type: "string" },
+      as: { type: "string" },
+      from: { type: "string" },
+      note: { type: "string" }
     }
   });
   const [command, sub] = positionals;
@@ -886,8 +983,37 @@ async function run(argv, env = process.env) {
       say("Usage: pair start --url <dashboard> --name <agent name> | pair wait");
       return 2;
     }
+    case "secret": {
+      const name = positionals[2];
+      const usage = "Usage: secret get <NAME> --to <file> | secret get <NAME> --env-file <file> [--as VAR] | secret put <NAME> --from <file> [--note <text>]";
+      if (!name || sub !== "get" && sub !== "put") {
+        say(usage);
+        return 2;
+      }
+      const url = values.url?.trim() || readSettings(store)?.url || settingsFrom(env).url;
+      const token = url ? store.resolve(env, url) : null;
+      if (!url || !token) {
+        say("This project is not connected to the dashboard yet: pair it first (wildware-feed:connecting-to-the-feed).");
+        return 2;
+      }
+      try {
+        if (sub === "get") {
+          say(await getSecret({ url, token: token.token, name, to: values.to, envFile: values["env-file"], as: values.as }));
+        } else {
+          if (!values.from) {
+            say(usage);
+            return 2;
+          }
+          say(await putSecret({ url, token: token.token, name, from: values.from, note: values.note }));
+        }
+        return 0;
+      } catch (e) {
+        say(`secret ${sub} ${name}: ${e instanceof Error ? e.message : String(e)}`);
+        return 1;
+      }
+    }
     default:
-      say("Usage: feed.mjs <headers|session-start|monitor|status|forget|pair start|pair wait> --data <dir> [--project <dir>]");
+      say("Usage: feed.mjs <headers|session-start|monitor|status|forget|pair start|pair wait|secret get|secret put> --data <dir> [--project <dir>]");
       return 2;
   }
 }

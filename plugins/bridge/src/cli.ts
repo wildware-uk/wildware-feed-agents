@@ -8,6 +8,8 @@
  *   pair wait     wait for their decision and save the token
  *   status        say whether this project is paired, and as whom
  *   forget        drop this project's token
+ *   secret get    fetch a secret straight into a file (0600); prints only "saved …"
+ *   secret put    hand a file to the owner as a secret; prints only "saved …"
  *
  * Every command takes `--data <plugin data dir>` and `--project <dir>`; the
  * plugin's own files pass `${CLAUDE_PLUGIN_DATA}` and `${CLAUDE_PROJECT_DIR}`.
@@ -18,6 +20,7 @@ import { Store, writeSecret } from './store';
 import { startPairing, waitForPairing } from './pair';
 import { channelIsLive, CLAIM_EVERY_MS } from './claim';
 import { runMonitor } from './monitor';
+import { getSecret, putSecret } from './secret';
 
 /** What the hook saves for the monitor. No token: that is in the store. */
 export type Settings = { url: string | null; projects: string; monitor: 'auto' | 'off' };
@@ -174,7 +177,12 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
 			project: { type: 'string' },
 			url: { type: 'string' },
 			name: { type: 'string' },
-			force: { type: 'boolean' }
+			force: { type: 'boolean' },
+			to: { type: 'string' },
+			'env-file': { type: 'string' },
+			as: { type: 'string' },
+			from: { type: 'string' },
+			note: { type: 'string' }
 		}
 	});
 	const [command, sub] = positionals;
@@ -219,8 +227,39 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
 			say('Usage: pair start --url <dashboard> --name <agent name> | pair wait');
 			return 2;
 		}
+		case 'secret': {
+			const name = positionals[2];
+			const usage =
+				'Usage: secret get <NAME> --to <file> | secret get <NAME> --env-file <file> [--as VAR] | secret put <NAME> --from <file> [--note <text>]';
+			if (!name || (sub !== 'get' && sub !== 'put')) {
+				say(usage);
+				return 2;
+			}
+			const url = values.url?.trim() || readSettings(store)?.url || settingsFrom(env).url;
+			const token = url ? store.resolve(env, url) : null;
+			if (!url || !token) {
+				say('This project is not connected to the dashboard yet: pair it first (wildware-feed:connecting-to-the-feed).');
+				return 2;
+			}
+			try {
+				if (sub === 'get') {
+					say(await getSecret({ url, token: token.token, name, to: values.to, envFile: values['env-file'], as: values.as }));
+				} else {
+					if (!values.from) {
+						say(usage);
+						return 2;
+					}
+					say(await putSecret({ url, token: token.token, name, from: values.from, note: values.note }));
+				}
+				return 0;
+			} catch (e) {
+				// The dashboard's words, never a value or a link.
+				say(`secret ${sub} ${name}: ${e instanceof Error ? e.message : String(e)}`);
+				return 1;
+			}
+		}
 		default:
-			say('Usage: feed.mjs <headers|session-start|monitor|status|forget|pair start|pair wait> --data <dir> [--project <dir>]');
+			say('Usage: feed.mjs <headers|session-start|monitor|status|forget|pair start|pair wait|secret get|secret put> --data <dir> [--project <dir>]');
 			return 2;
 	}
 }

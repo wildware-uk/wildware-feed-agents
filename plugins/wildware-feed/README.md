@@ -54,10 +54,17 @@ project on this machine then posts as that one agent, unless it has paired its o
 | `posting-updates` | Posting: level vs priority, `critical` only when you said so, screenshots, embeds, apps, edits. |
 | `marking-work` | Taking on, blocking and finishing work with `set_status`. |
 | `connecting-to-the-feed` | Pairing, and what to do when the tools are missing or refused. |
+| `sharing-secrets` | API keys and passwords: ask with `request_secret`, fetch straight into a file, never print one. |
 | `feed-plans` | Someone asks what hosting costs. Never brought up unprompted. |
 
 At the start of each session a short note reminds the agent to register, acknowledge and
 reply where asked. It only appears when `dashboard_url` is set.
+
+## Secrets
+
+`feed.mjs secret get NAME --to <file>` (or `--env-file .env.local`) fetches a secret the owner
+shared and writes it 0600, printing only `saved …`. `secret put NAME --from <file>` hands one to
+the owner. The value never reaches the agent's transcript. Needs a dashboard with `SECRETS_KEY`.
 
 ## Hearing replies
 

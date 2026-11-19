@@ -8576,13 +8576,13 @@ var numericOriginMap = {
 };
 var $ZodCheckLessThan = /* @__PURE__ */ $constructor("$ZodCheckLessThan", (inst, def) => {
   $ZodCheck.init(inst, def);
-  const origin = numericOriginMap[typeof def.value];
+  const origin2 = numericOriginMap[typeof def.value];
   inst._zod.check = (payload) => {
     if (def.inclusive ? payload.value <= def.value : payload.value < def.value) {
       return;
     }
     payload.issues.push({
-      origin: numericOriginMap[typeof payload.value] ?? origin,
+      origin: numericOriginMap[typeof payload.value] ?? origin2,
       code: "too_big",
       maximum: typeof def.value === "object" ? def.value.getTime() : def.value,
       input: payload.value,
@@ -8594,13 +8594,13 @@ var $ZodCheckLessThan = /* @__PURE__ */ $constructor("$ZodCheckLessThan", (inst,
 });
 var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", (inst, def) => {
   $ZodCheck.init(inst, def);
-  const origin = numericOriginMap[typeof def.value];
+  const origin2 = numericOriginMap[typeof def.value];
   inst._zod.check = (payload) => {
     if (def.inclusive ? payload.value >= def.value : payload.value > def.value) {
       return;
     }
     payload.issues.push({
-      origin: numericOriginMap[typeof payload.value] ?? origin,
+      origin: numericOriginMap[typeof payload.value] ?? origin2,
       code: "too_small",
       minimum: typeof def.value === "object" ? def.value.getTime() : def.value,
       input: payload.value,
@@ -8635,14 +8635,14 @@ var $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat"
   $ZodCheck.init(inst, def);
   def.format = def.format || "float64";
   const isInt = def.format?.includes("int");
-  const origin = isInt ? "int" : "number";
+  const origin2 = isInt ? "int" : "number";
   const [minimum, maximum] = NUMBER_FORMAT_RANGES[def.format];
   inst._zod.check = (payload) => {
     const input = payload.value;
     if (isInt) {
       if (!Number.isInteger(input)) {
         payload.issues.push({
-          expected: origin,
+          expected: origin2,
           format: def.format,
           code: "invalid_type",
           continue: false,
@@ -8659,7 +8659,7 @@ var $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat"
             maximum: Number.MAX_SAFE_INTEGER,
             note: "Integers must be within the safe integer range.",
             inst,
-            origin,
+            origin: origin2,
             inclusive: true,
             continue: !def.abort
           });
@@ -8670,7 +8670,7 @@ var $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat"
             minimum: Number.MIN_SAFE_INTEGER,
             note: "Integers must be within the safe integer range.",
             inst,
-            origin,
+            origin: origin2,
             inclusive: true,
             continue: !def.abort
           });
@@ -8712,9 +8712,9 @@ var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (ins
     const length = typeof input === "string" && units > def.maximum ? codePointLength(input) : units;
     if (length <= def.maximum)
       return;
-    const origin = getLengthableOrigin(input);
+    const origin2 = getLengthableOrigin(input);
     payload.issues.push({
-      origin,
+      origin: origin2,
       code: "too_big",
       maximum: def.maximum,
       inclusive: true,
@@ -8734,9 +8734,9 @@ var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (ins
     const length = typeof input === "string" && units >= def.minimum && units < def.minimum * 2 ? codePointLength(input) : units;
     if (length >= def.minimum)
       return;
-    const origin = getLengthableOrigin(input);
+    const origin2 = getLengthableOrigin(input);
     payload.issues.push({
-      origin,
+      origin: origin2,
       code: "too_small",
       minimum: def.minimum,
       inclusive: true,
@@ -8756,10 +8756,10 @@ var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals"
     const length = typeof input === "string" && units >= def.length && units <= def.length * 2 ? codePointLength(input) : units;
     if (length === def.length)
       return;
-    const origin = getLengthableOrigin(input);
+    const origin2 = getLengthableOrigin(input);
     const tooBig = length > def.length;
     payload.issues.push({
-      origin,
+      origin: origin2,
       ...tooBig ? { code: "too_big", maximum: def.length } : { code: "too_small", minimum: def.length },
       inclusive: true,
       exact: true,
@@ -10876,8 +10876,8 @@ var error = () => {
     set: { unit: "items", verb: "to have" },
     map: { unit: "entries", verb: "to have" }
   };
-  function getSizing(origin) {
-    return Sizable[origin] ?? null;
+  function getSizing(origin2) {
+    return Sizable[origin2] ?? null;
   }
   const FormatDictionary = {
     regex: "input",
