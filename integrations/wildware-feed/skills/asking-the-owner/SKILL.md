@@ -45,6 +45,25 @@ request_input({
 Use `value.text`, never your own draft: they may have rewritten it. `"Reject"` means
 send nothing.
 
+## Point at what you already posted
+
+To ask about something on another card, show that card inside the question with `refs`
+rather than posting it twice. Each ref is `{ kind, id }`: kind `update`, `message` or
+`request`, and the id the tool that made it returned. Up to 8.
+
+```
+r = post_message({ update_id, body: "Here it is running.", media_ids: [video] })
+request_input({
+  kind: "confirm", project: "web",
+  question: "Does the new login flow look right?",
+  refs: [{ kind: "message", id: r.message.id }]
+})
+```
+
+Your owner sees the reply small inside the question, video and all, and a tap opens its
+thread. `post_message`, `post_update` and the `edit_*` tools take `refs` too; an edit's
+list replaces the old one. A card you cannot read, or one already removed, is refused.
+
 ## The wait loop
 
 ```

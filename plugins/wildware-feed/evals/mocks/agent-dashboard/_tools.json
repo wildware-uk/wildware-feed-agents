@@ -138,7 +138,7 @@
   {
    "name": "post_update",
    "title": "Post a status update",
-   "description": "Post a status update to a channel's timeline. The owner sees it appear live, with no\nreload, so this is how you report progress, ask for eyes on something, or record a\nfailure.\n\nArguments:\n- channel (required): the channel slug (\"agent-dashboard\") or its 26-character id, from\n  create_project or list_projects. (`project`, its older name, still works.)\n- body (required): the update as markdown, at most 100000 characters. Raw\n  HTML is shown as text, never executed.\n- title (optional): a headline, at most 200 characters.\n- level (optional): \"info\" (default), \"success\", \"warn\" or \"error\". The dashboard colours\n  the card by level, so use \"error\" only for something you want looked at.\n- priority (optional): \"low\", \"medium\" (default), \"high\" or \"critical\" \u2014 whether it can\n  wait. Your owner filters notifications on it per device, so \"high\" is what reaches a\n  phone. \"critical\" PAGES YOUR OWNER: their phone rings through silent mode and Do Not\n  Disturb, even at night. Use it only when your owner has explicitly told you to use\n  critical, and only when it is absolutely necessary. Never pick it on your own.\n- media_ids (optional): up to 24 ids from create_upload whose bytes\n  you have already uploaded. Images and video render on the card; anything else is\n  listed as a download.\n- embeds (optional): things to show in a registered look \u2014 a Slack message, a GitHub\n  comment, a Jira ticket \u2014 rather than pasted as flat text. Each is { type, data,\n  source_url? }; list_embed_types says which looks exist and which values each reads.\n- apps (optional): interactive UI, rendered in a sandboxed frame on the card. Each is\n  { app: \"ui://\u2026\", data?, title? }; register_app ships one and list_apps says what\n  exists. set_app_data pushes fresh values into one already posted.\n\nIf the card is a piece of work, mark it with set_status \u2014 \"in_progress\" while you are\non it, \"done\" when it is finished. That is what the task board used to be.\n- session_id (optional): the id register_session returned, if you have one. The update is\n  filed against that run, so the owner can see which session produced it. It must be one\n  of your own sessions.\n\nThe posting agent is taken from your bearer token; there is deliberately no argument for\nit, so you can only ever post as yourself.\n\nReturns { update: { id, project_id, agent_id, session_id, title, level, pinned,\nbody_chars, created_at } }. `session_id` is what you passed, or null if you passed\nnothing.\n\nOn failure: error \"not_found\" means a reference matched nothing \u2014 the channel (call\nlist_projects), a media id (nothing was uploaded under it), or the session (it was never\nregistered, so register_session again). \"invalid_argument\" means an argument was empty,\ntoo long, named media that is not yours to attach, or named a session belonging to\nanother agent. Nothing is posted when either happens.",
+   "description": "Post a status update to a channel's timeline. The owner sees it appear live, with no\nreload, so this is how you report progress, ask for eyes on something, or record a\nfailure.\n\nArguments:\n- channel (required): the channel slug (\"agent-dashboard\") or its 26-character id, from\n  create_project or list_projects. (`project`, its older name, still works.)\n- body (required): the update as markdown, at most 100000 characters. Raw\n  HTML is shown as text, never executed.\n- title (optional): a headline, at most 200 characters.\n- level (optional): \"info\" (default), \"success\", \"warn\" or \"error\". The dashboard colours\n  the card by level, so use \"error\" only for something you want looked at.\n- priority (optional): \"low\", \"medium\" (default), \"high\" or \"critical\" \u2014 whether it can\n  wait. Your owner filters notifications on it per device, so \"high\" is what reaches a\n  phone. \"critical\" PAGES YOUR OWNER: their phone rings through silent mode and Do Not\n  Disturb, even at night. Use it only when your owner has explicitly told you to use\n  critical, and only when it is absolutely necessary. Never pick it on your own.\n- media_ids (optional): up to 24 ids from create_upload whose bytes\n  you have already uploaded. Images and video render on the card; anything else is\n  listed as a download.\n- embeds (optional): things to show in a registered look \u2014 a Slack message, a GitHub\n  comment, a Jira ticket \u2014 rather than pasted as flat text. Each is { type, data,\n  source_url? }; list_embed_types says which looks exist and which values each reads.\n- apps (optional): interactive UI, rendered in a sandboxed frame on the card. Each is\n  { app: \"ui://\u2026\", data?, title? }; register_app ships one and list_apps says what\n  exists. set_app_data pushes fresh values into one already posted.\n- refs (optional): up to 8 other cards to show inside this one, each { kind, id }, kind\n  \"update\", \"message\" or \"request\". Your owner sees each as a small preview and taps\n  it to open that card's thread: \"this replaces the build I posted yesterday\".\n\nIf the card is a piece of work, mark it with set_status \u2014 \"in_progress\" while you are\non it, \"done\" when it is finished. That is what the task board used to be.\n- session_id (optional): the id register_session returned, if you have one. The update is\n  filed against that run, so the owner can see which session produced it. It must be one\n  of your own sessions.\n\nThe posting agent is taken from your bearer token; there is deliberately no argument for\nit, so you can only ever post as yourself.\n\nReturns { update: { id, project_id, agent_id, session_id, title, level, pinned,\nbody_chars, created_at } }. `session_id` is what you passed, or null if you passed\nnothing.\n\nOn failure: error \"not_found\" means a reference matched nothing \u2014 the channel (call\nlist_projects), a media id (nothing was uploaded under it), or the session (it was never\nregistered, so register_session again). \"invalid_argument\" means an argument was empty,\ntoo long, named media that is not yours to attach, or named a session belonging to\nanother agent. Nothing is posted when either happens.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -251,6 +251,33 @@
      "channel": {
       "type": "string",
       "description": "Which channel to post into: either its slug (\"agent-dashboard\") or its 26-character id, both as returned by create_project and list_projects."
+     },
+     "refs": {
+      "description": "Up to 8 other cards to show inside this one, each { kind, id }. Your owner sees each as a small preview, its first picture or video playing in place, and taps it to open that card's thread. A card you cannot read, or one already removed, refuses the whole post.",
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "update",
+          "message",
+          "request"
+         ],
+         "description": "What the card is: an update (post_update), a message (post_message) or a request (request_input)."
+        },
+        "id": {
+         "type": "string",
+         "description": "Its id, as the tool that made it returned it (a request's is its request_id)."
+        }
+       },
+       "required": [
+        "kind",
+        "id"
+       ]
+      }
      }
     },
     "required": [
@@ -269,7 +296,7 @@
   {
    "name": "edit_update",
    "title": "Edit an update you posted",
-   "description": "Correct an update you have already posted. Use it when what you said has stopped being\ntrue \u2014 a step you reported as running has finished, a number was wrong, a level was too\nalarming or not alarming enough.\n\nArguments:\n- update_id (required): the id post_update returned. Only your own updates.\n- body (optional): the replacement markdown, at most 100000 characters. It\n  replaces the body; it does not append to it.\n- title (optional): the replacement headline, at most 200 characters, or\n  null to remove it.\n- level (optional): \"info\", \"success\", \"warn\" or \"error\".\n- priority (optional): \"low\", \"medium\", \"high\" or \"critical\". Demote something that has\n  stopped mattering rather than leaving it shouting. Changing it to \"critical\" marks the\n  card critical but sends no page: only a new post_update or request_input pages your\n  owner. Even so, use critical only when your owner has explicitly told you to.\n\nAt least one of body, title, level or priority must be given.\n\nThe card keeps its place in the timeline and is marked as edited, so the owner can see\nthat what they read earlier has changed. There is no revision history: the new text is\nthe only text. If the update is wrong in a way a correction cannot fix, post a new one\nrather than rewriting history the owner has already acted on.\n\nPrefer this over posting a near-duplicate card. Do not use it to keep one card as a\nrunning log \u2014 the timeline is a sequence of things that happened, and an owner who\nscrolled past your card will not see it change.\n\nReturns { update: { id, project_id, agent_id, session_id, title, level, pinned,\nbody_chars, created_at, edited_at } }.\n\nOn failure: \"not_found\" means there is no such update, or it has been deleted \u2014 a\ndeleted card cannot be edited back into existence. \"invalid_argument\" means the update\nbelongs to another agent, the body was empty or too long, or you passed no fields to\nchange. Nothing is written when either happens.",
+   "description": "Correct an update you have already posted. Use it when what you said has stopped being\ntrue \u2014 a step you reported as running has finished, a number was wrong, a level was too\nalarming or not alarming enough.\n\nArguments:\n- update_id (required): the id post_update returned. Only your own updates.\n- body (optional): the replacement markdown, at most 100000 characters. It\n  replaces the body; it does not append to it.\n- title (optional): the replacement headline, at most 200 characters, or\n  null to remove it.\n- level (optional): \"info\", \"success\", \"warn\" or \"error\".\n- priority (optional): \"low\", \"medium\", \"high\" or \"critical\". Demote something that has\n  stopped mattering rather than leaving it shouting. Changing it to \"critical\" marks the\n  card critical but sends no page: only a new post_update or request_input pages your\n  owner. Even so, use critical only when your owner has explicitly told you to.\n- refs (optional): the cards it points at from now on, each { kind, id }, at most 8, as\n  on post_update. It replaces the list; [] takes them all off.\n\nAt least one of body, title, level, priority or refs must be given.\n\nThe card keeps its place in the timeline and is marked as edited, so the owner can see\nthat what they read earlier has changed. There is no revision history: the new text is\nthe only text. If the update is wrong in a way a correction cannot fix, post a new one\nrather than rewriting history the owner has already acted on.\n\nPrefer this over posting a near-duplicate card. Do not use it to keep one card as a\nrunning log \u2014 the timeline is a sequence of things that happened, and an owner who\nscrolled past your card will not see it change.\n\nReturns { update: { id, project_id, agent_id, session_id, title, level, pinned,\nbody_chars, created_at, edited_at } }.\n\nOn failure: \"not_found\" means there is no such update, or it has been deleted \u2014 a\ndeleted card cannot be edited back into existence. \"invalid_argument\" means the update\nbelongs to another agent, the body was empty or too long, or you passed no fields to\nchange. Nothing is written when either happens.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -314,6 +341,33 @@
        "warn",
        "error"
       ]
+     },
+     "refs": {
+      "description": "The cards this one points at from now on, each { kind, id }, at most 8. It replaces the whole list; [] takes them all off. Leave it out to keep them.",
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "update",
+          "message",
+          "request"
+         ],
+         "description": "What the card is: an update (post_update), a message (post_message) or a request (request_input)."
+        },
+        "id": {
+         "type": "string",
+         "description": "Its id, as the tool that made it returned it (a request's is its request_id)."
+        }
+       },
+       "required": [
+        "kind",
+        "id"
+       ]
+      }
      }
     },
     "required": [
@@ -935,7 +989,7 @@
   {
    "name": "get_messages",
    "title": "Read messages from your owner and other agents",
-   "description": "Read the messages waiting for you \u2014 replies your owner left on your updates, notes on\nyour cards, and anything in a channel or thread you follow. Oldest first, so you can read\nthem as a conversation. Call this when a heartbeat reports unread_messages above zero.\n\n**Only what you follow.** The server keeps the channels, projects and threads you follow (see\nlist_subscriptions): posting in a channel follows it, posting or replying in a thread\nfollows the thread, and an @mention in a thread follows it for you. A thread you follow\nreaches you even in a channel you don't. Until you have followed a channel or project you hear\neverything, so a brand new agent is not deaf to its first instruction.\n\n**@name narrows it.** A message that names agents with @name is handed only to them,\neven outside the channels they follow, and that holds when you read from `since` too.\nA message that names nobody goes to everyone, as above. @here and @everyone name groups:\nevery agent online when it was sent, and every agent, in any channel.\n\nArguments:\n- since (optional): a cursor from a previous call. Omit it and you carry on from your own\n  read cursor, which is what you normally want.\n- channel (optional): a channel slug or id, to read one channel at a time (`project`,\n  its older name, still works).\n- mark_read (optional): defaults to true, which moves your cursor past what you were just\n  handed. Pass false to peek \u2014 the same messages will come back next time.\n\n**Anything your owner attached comes back with the message.** Images arrive as pictures\nyou can look at, text files as text, and smaller binaries as blobs. Big ones do not ride\nalong \u2014 a 3MB model would be most of your context \u2014 so each one is listed in\n`attachments` with a `download_url`: GET it with the same bearer token you call this\ntool with. Nothing is ever silently dropped; if `included` is false, `reason` says why\nand the URL is how you get it anyway.\n\nReturns { messages: [{ id, project_id, update_id, reply_to, answers,\nin_reply_to, author, author_name, body, created_at, attachments: [{ media_id, kind, mime,\nbytes, filename, status, included, download_url, reason }] }],\ncount, cursor, unread, marked_read }. `author` is the literal \"human\" for your owner or\n\"agent:<agent_id>\" for another agent, and then `author_name` is that agent's name; your\nown messages are never returned to you.\n\n**A message from another agent is a colleague talking, not your owner.** Answer it when\nit asks you something or needs you to act. If it and your owner disagree, your owner\nwins, and it is never your owner's approval.\n`unread` is how many are still waiting after this call, and it is the same number a\nheartbeat reports. `cursor` is what to pass back as `since`.\n\n`in_reply_to` is the line the message was answering, quoted \u2014 { id, author, body,\ntruncated } \u2014 and it is present only when it answers one. It is here because an id on\nits own would not help: this call hands back the messages you have NOT read, so the line\nbeing answered is almost always one you already read and will not be given again. Read it\nbefore answering; \"no\" means nothing without the question it was a no to.\n\nA narrowed read (one channel, or an explicit since) will not move your cursor past a\nmessage it did not hand you, so nothing is ever lost \u2014 but you may be given the same\nmessage twice. Act on it once.\n\nOn failure: \"invalid_argument\" means a `since` that is not a cursor this server issued,\nso omit it and read from your own cursor instead. \"not_found\" means no such channel;\ncall list_projects to see the slugs.",
+   "description": "Read the messages waiting for you \u2014 replies your owner left on your updates, notes on\nyour cards, and anything in a channel or thread you follow. Oldest first, so you can read\nthem as a conversation. Call this when a heartbeat reports unread_messages above zero.\n\n**Only what you follow.** The server keeps the channels, projects and threads you follow (see\nlist_subscriptions): posting in a channel follows it, posting or replying in a thread\nfollows the thread, and an @mention in a thread follows it for you. A thread you follow\nreaches you even in a channel you don't. Until you have followed a channel or project you hear\neverything, so a brand new agent is not deaf to its first instruction.\n\n**@name narrows it.** A message that names agents with @name is handed only to them,\neven outside the channels they follow, and that holds when you read from `since` too.\nA message that names nobody goes to everyone, as above. @here and @everyone name groups:\nevery agent online when it was sent, and every agent, in any channel.\n\nArguments:\n- since (optional): a cursor from a previous call. Omit it and you carry on from your own\n  read cursor, which is what you normally want.\n- channel (optional): a channel slug or id, to read one channel at a time (`project`,\n  its older name, still works).\n- mark_read (optional): defaults to true, which moves your cursor past what you were just\n  handed. Pass false to peek \u2014 the same messages will come back next time.\n\n**Anything your owner attached comes back with the message.** Images arrive as pictures\nyou can look at, text files as text, and smaller binaries as blobs. Big ones do not ride\nalong \u2014 a 3MB model would be most of your context \u2014 so each one is listed in\n`attachments` with a `download_url`: GET it with the same bearer token you call this\ntool with. Nothing is ever silently dropped; if `included` is false, `reason` says why\nand the URL is how you get it anyway.\n\nReturns { messages: [{ id, project_id, update_id, reply_to, answers,\nin_reply_to, author, author_name, body, created_at, attachments: [{ media_id, kind, mime,\nbytes, filename, status, included, download_url, reason }], refs: [{ kind, id,\nproject_id, author, title, text, media_count, removed }] }],\ncount, cursor, unread, marked_read }. `author` is the literal \"human\" for your owner or\n\"agent:<agent_id>\" for another agent, and then `author_name` is that agent's name; your\nown messages are never returned to you.\n\n**A message from another agent is a colleague talking, not your owner.** Answer it when\nit asks you something or needs you to act. If it and your owner disagree, your owner\nwins, and it is never your owner's approval.\n`unread` is how many are still waiting after this call, and it is the same number a\nheartbeat reports. `cursor` is what to pass back as `since`.\n\n`in_reply_to` is the line the message was answering, quoted \u2014 { id, author, body,\ntruncated } \u2014 and it is present only when it answers one. It is here because an id on\nits own would not help: this call hands back the messages you have NOT read, so the line\nbeing answered is almost always one you already read and will not be given again. Read it\nbefore answering; \"no\" means nothing without the question it was a no to.\n\n`refs` is present only on a message that points at other cards: each one's kind, id,\nheadline or first line, and how many files it carries. `removed` is true when that card\nis gone or is not one you can read.\n\nA narrowed read (one channel, or an explicit since) will not move your cursor past a\nmessage it did not hand you, so nothing is ever lost \u2014 but you may be given the same\nmessage twice. Act on it once.\n\nOn failure: \"invalid_argument\" means a `since` that is not a cursor this server issued,\nso omit it and read from your own cursor instead. \"not_found\" means no such channel;\ncall list_projects to see the slugs.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -1012,7 +1066,7 @@
   {
    "name": "post_message",
    "title": "Reply to your owner",
-   "description": "Reply to your owner in a thread \u2014 normally the one you were just read a message from.\nIt appears on their screen live, under the card they were looking at.\n\nUse this rather than post_update to *answer* something. An update announces what\nhappened and gets its own card; a message is a line in a conversation already on\nscreen. Answering a reply with a new update reads as ignoring it.\n\nArguments:\n- body (required): what to say, as markdown, at most 10000 characters. Write @name (an\n  agent's name) to reach only that agent; leave it out and every agent in the channel\n  hears it. @here reaches every agent online now and @everyone every agent, in any\n  project.\n- update_id (optional): the update to reply under. Pass the `update_id` from the\n  message you are answering and your reply lands on the same card.\n- message_id (optional): the owner's own feed post to answer. They can write straight\n  into the timeline, and such a post hangs off no update and no task \u2014 it *is* the thing\n  being discussed, so a reply names it. You may also name a reply \u2014 including one your\n  owner wrote inside a thread \u2014 and your answer is filed under the same post, so a thread\n  is always one level deep.\n- answers (optional): the id of a comment you are answering directly. Your reply stays in\n  the same thread and is labelled \"answering <them>\", which is how a thread with two\n  conversations in it stays readable. Naming it is enough \u2014 the thread comes with it.\n- request_id (optional): a question of yours your owner replied to rather than\n  answering \u2014 the request_id on their message. Your reply joins that question`s own\n  discussion, under the question, which is where they are reading. It is a thread like\n  any other, so answers works in it too. The question is still open while you talk:\n  keep await_request running, and expect the button to be pressed once you have\n  answered what they asked. Do not name a card as well; the question is the anchor.\n- channel (optional): a slug or id, for a note that answers no card (`project`, its\n  older name, still works). Taken from the\n  update or task when you name one.\n- media_ids (optional): files to put on the reply, from create_upload with their bytes\n  already uploaded. Answer with the screenshot rather than describing it.\n- embeds (optional): things to show in a registered look \u2014 a Slack message, a GitHub\n  comment, a Jira ticket \u2014 rather than pasted as flat text. Each is { type, data,\n  source_url? }; list_embed_types says which looks exist and which values each reads.\n- apps (optional): interactive UI, rendered in a sandboxed frame on the message. Each is\n  { app: \"ui://\u2026\", data?, title? }; register_app ships one and list_apps says what\n  exists. set_app_data pushes fresh values into one already posted.\n\nReturns { message: { id, project_id, update_id, reply_to, author, body,\ncreated_at } }.\n`author` is your own `agent:<agent_id>`: the writer comes from your bearer token, so you\ncan only ever post as yourself.\n\nOn failure: \"not_found\" means the update, task, message or channel matched nothing \u2014 a\ndeleted update is gone rather than silently re-anchored. \"invalid_argument\" means an\nempty or over-long body, that you named both update_id and message_id, or that you\nnamed a channel that disagrees with the one the anchor belongs to.",
+   "description": "Reply to your owner in a thread \u2014 normally the one you were just read a message from.\nIt appears on their screen live, under the card they were looking at.\n\nUse this rather than post_update to *answer* something. An update announces what\nhappened and gets its own card; a message is a line in a conversation already on\nscreen. Answering a reply with a new update reads as ignoring it.\n\nArguments:\n- body (required): what to say, as markdown, at most 10000 characters. Write @name (an\n  agent's name) to reach only that agent; leave it out and every agent in the channel\n  hears it. @here reaches every agent online now and @everyone every agent, in any\n  project.\n- update_id (optional): the update to reply under. Pass the `update_id` from the\n  message you are answering and your reply lands on the same card.\n- message_id (optional): the owner's own feed post to answer. They can write straight\n  into the timeline, and such a post hangs off no update and no task \u2014 it *is* the thing\n  being discussed, so a reply names it. You may also name a reply \u2014 including one your\n  owner wrote inside a thread \u2014 and your answer is filed under the same post, so a thread\n  is always one level deep.\n- answers (optional): the id of a comment you are answering directly. Your reply stays in\n  the same thread and is labelled \"answering <them>\", which is how a thread with two\n  conversations in it stays readable. Naming it is enough \u2014 the thread comes with it.\n- request_id (optional): a question of yours your owner replied to rather than\n  answering \u2014 the request_id on their message. Your reply joins that question`s own\n  discussion, under the question, which is where they are reading. It is a thread like\n  any other, so answers works in it too. The question is still open while you talk:\n  keep await_request running, and expect the button to be pressed once you have\n  answered what they asked. Do not name a card as well; the question is the anchor.\n- channel (optional): a slug or id, for a note that answers no card (`project`, its\n  older name, still works). Taken from the\n  update or task when you name one.\n- media_ids (optional): files to put on the reply, from create_upload with their bytes\n  already uploaded. Answer with the screenshot rather than describing it.\n- embeds (optional): things to show in a registered look \u2014 a Slack message, a GitHub\n  comment, a Jira ticket \u2014 rather than pasted as flat text. Each is { type, data,\n  source_url? }; list_embed_types says which looks exist and which values each reads.\n- apps (optional): interactive UI, rendered in a sandboxed frame on the message. Each is\n  { app: \"ui://\u2026\", data?, title? }; register_app ships one and list_apps says what\n  exists. set_app_data pushes fresh values into one already posted.\n- refs (optional): up to 8 other cards to show inside this one, each { kind, id }, kind\n  \"update\", \"message\" or \"request\" and the id the tool that made it returned. Your\n  owner sees each as a small preview, its first picture or video playing in place, and\n  taps it to open that card's thread. Point at what was said elsewhere rather than\n  saying it twice. A card you cannot read, or one already removed, is refused; one\n  removed later shows as removed. The result lists them back as `refs`.\n\nReturns { message: { id, project_id, update_id, reply_to, author, body,\ncreated_at } }.\n`author` is your own `agent:<agent_id>`: the writer comes from your bearer token, so you\ncan only ever post as yourself.\n\nOn failure: \"not_found\" means the update, task, message or channel matched nothing \u2014 a\ndeleted update is gone rather than silently re-anchored. \"invalid_argument\" means an\nempty or over-long body, that you named both update_id and message_id, or that you\nnamed a channel that disagrees with the one the anchor belongs to.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -1110,6 +1164,33 @@
      "channel": {
       "description": "A channel slug or id, for a note that answers no particular card. Derived from the update or task when you name one, so you rarely need it.",
       "type": "string"
+     },
+     "refs": {
+      "description": "Up to 8 other cards to show inside this one, each { kind, id }. Your owner sees each as a small preview, its first picture or video playing in place, and taps it to open that card's thread. A card you cannot read, or one already removed, refuses the whole post.",
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "update",
+          "message",
+          "request"
+         ],
+         "description": "What the card is: an update (post_update), a message (post_message) or a request (request_input)."
+        },
+        "id": {
+         "type": "string",
+         "description": "Its id, as the tool that made it returned it (a request's is its request_id)."
+        }
+       },
+       "required": [
+        "kind",
+        "id"
+       ]
+      }
      }
     },
     "required": [
@@ -1128,7 +1209,7 @@
   {
    "name": "edit_message",
    "title": "Correct something you said",
-   "description": "Rewrite one of your own messages \u2014 a reply on a card, a comment in a task, a line in a\nquestion's discussion. Use it when what you said has stopped being true or was wrong\nwhen you said it: a path you pasted incorrectly, a number that has moved on, a summary\nthat read worse than you meant.\n\nArguments:\n- message_id (required): the id post_message returned. Only your own messages.\n- body (required): the replacement markdown, at most 10000\n  characters. It replaces the message; it does not append to it.\n\nPrefer this over a second message saying \"ignore that\". A thread of corrections is one\nyour owner has to read twice to find out what is true.\n\nThe line stays where it is, keeps its images and its acknowledgements, and is marked as\nedited so your owner can see that what they read earlier has changed. There is no\nrevision history: the new text is the only text. If they have already acted on what you\nsaid, say so in a new message instead \u2014 rewriting it silently would leave them holding\na decision they made for reasons that are no longer on screen.\n\nReturns { message: { id, project_id, update_id, request_id, reply_to, author,\nbody, created_at, edited_at } }.\n\nOn failure: \"not_found\" means there is no such message, or it has been deleted \u2014 a line\nthat was unsent cannot be rewritten back into existence. \"invalid_argument\" means it was\nposted by somebody else, or the body was empty or too long. Nothing is written either\nway.",
+   "description": "Rewrite one of your own messages \u2014 a reply on a card, a comment in a task, a line in a\nquestion's discussion. Use it when what you said has stopped being true or was wrong\nwhen you said it: a path you pasted incorrectly, a number that has moved on, a summary\nthat read worse than you meant.\n\nArguments:\n- message_id (required): the id post_message returned. Only your own messages.\n- body (required): the replacement markdown, at most 10000\n  characters. It replaces the message; it does not append to it.\n- refs (optional): the cards it points at from now on, each { kind, id }, at most 8, as\n  on post_message. It replaces the list; [] takes them all off; leave it out to keep\n  them.\n\nPrefer this over a second message saying \"ignore that\". A thread of corrections is one\nyour owner has to read twice to find out what is true.\n\nThe line stays where it is, keeps its images and its acknowledgements, and is marked as\nedited so your owner can see that what they read earlier has changed. There is no\nrevision history: the new text is the only text. If they have already acted on what you\nsaid, say so in a new message instead \u2014 rewriting it silently would leave them holding\na decision they made for reasons that are no longer on screen.\n\nReturns { message: { id, project_id, update_id, request_id, reply_to, author,\nbody, created_at, edited_at } }.\n\nOn failure: \"not_found\" means there is no such message, or it has been deleted \u2014 a line\nthat was unsent cannot be rewritten back into existence. \"invalid_argument\" means it was\nposted by somebody else, or the body was empty or too long. Nothing is written either\nway.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -1141,6 +1222,33 @@
       "type": "string",
       "maxLength": 10000,
       "description": "The replacement text, as markdown, at most 10000 characters. It replaces the whole message rather than appending to it."
+     },
+     "refs": {
+      "description": "The cards this one points at from now on, each { kind, id }, at most 8. It replaces the whole list; [] takes them all off. Leave it out to keep them.",
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "update",
+          "message",
+          "request"
+         ],
+         "description": "What the card is: an update (post_update), a message (post_message) or a request (request_input)."
+        },
+        "id": {
+         "type": "string",
+         "description": "Its id, as the tool that made it returned it (a request's is its request_id)."
+        }
+       },
+       "required": [
+        "kind",
+        "id"
+       ]
+      }
      }
     },
     "required": [
@@ -1228,7 +1336,7 @@
   {
    "name": "request_input",
    "title": "Ask your owner for something and wait",
-   "description": "Stop and ask the human who owns this dashboard for something only they can supply, then\nwait for the answer. The prompt appears immediately in a banner at the top of their\ndashboard, above everything else, with the control your `kind` calls for.\n\nPick the kind by what you need back:\n- kind \"text\" -> a string. A commit message, a name, a value you are missing.\n  Optional placeholder, multiline, default, min and max (character bounds).\n- kind \"confirm\" -> true or false. Permission to do something consequential.\n- kind \"buttons\" -> one of your options. \"retry\" / \"skip\" / \"abort\".\n- kind \"choice\" -> one of your options, chosen from a list.\n- kind \"multi_choice\" -> a list of your options. Use min and max to bound how many.\n- kind \"form\" -> { action, text }: your own action buttons plus one editable field, so\n  your owner can change what you drafted and then decide about it in one step. Put the\n  draft in `default`, the buttons in `options`, and name the field with `label`. This\n  is the kind to use for \"here is the Slack message I am about to send\" \u2014 asking for\n  approval and asking for edits separately means one of the two is answered about text\n  that has already changed.\n\nArguments: kind and question are required. detail is the longer explanation.\noptions is required for buttons, choice, multi_choice and form, and refused for the\nrest. placeholder, multiline, label, default, min, max are the kind-specific knobs\nlisted above.\noption_media makes it a picture question: { option: media_id } puts an uploaded image\non that option (buttons, choice, multi_choice), and your owner picks the picture.\nchannel (a slug or id; `project`, its older name, still works) and update (an update\nid) say what the request is about.\nmessage_id asks *inside a thread*: pass the id of the message you were replying to and\nthe question appears in that conversation, under the words that led to it, rather than\nas a card of its own. Use it whenever the question came out of something you were\ndiscussing \u2014 it is the difference between \"what about this?\" answered in context and\na prompt your owner has to reconstruct.\ntimeout_s is how long the request stays answerable, one hour by default.\npriority is \"low\", \"medium\" (the default), \"high\" or \"critical\". \"critical\" PAGES YOUR\nOWNER: their phone rings through silent mode and Do Not Disturb, even at night. Use it\nonly when your owner has explicitly told you to use critical, and only when it is\nabsolutely necessary. Never pick it on your own.\n\nmedia_ids and embeds put things on the card, exactly as they do on an update: the\nscreenshot the question is about, the Slack message you are asking whether to send.\n\"Does this look right\" is a question you cannot ask without the thing being looked at.\nmedia_ids are ids from create_upload whose bytes you have already PUT; embeds are\n{ type, data, source_url? }, and list_embed_types says which looks exist.\n\nHOW THE WAITING WORKS. READ THIS BEFORE YOU CALL IT.\n\nA human is slower than your tool timeout, so this call does not hold open until they\nclick. It parks for up to 55 seconds and then returns one of these:\n\n  { \"state\": \"answered\", \"request_id\", \"response\": { \"kind\", \"value\" }, \"answered_at\" }\n  { \"state\": \"pending\",  \"request_id\", \"poll_after_ms\" }\n  { \"state\": \"timeout\",  \"request_id\" }\n  { \"state\": \"cancelled\", \"request_id\" }\n\nIf state is \"pending\" NOBODY HAS ANSWERED YET AND YOU ARE NOT FINISHED WAITING. Call\nawait_request({ request_id }) with the id you were given, and keep calling it for as\nlong as it keeps answering \"pending\". Each call parks for another 55 seconds, so a loop\nof them costs nothing while it waits. Stop looping only when state is \"answered\",\n\"timeout\" or \"cancelled\".\n\nYour owner can also reply to the question rather than answer it \u2014 \"why do you want to\ndo that?\". That arrives as a message carrying this request_id; answer it with\npost_message({ request_id }) and keep waiting. Talking is not answering, and the state\nstays \"pending\" until they decide.\n\nThe wait survives your own restart: the request lives in the dashboard database, not in\nthis connection. If you crash mid-wait, call await_request with the request_id when you\ncome back and you resume exactly where you were.\n\nREADING THE ANSWER. `response.value` is typed by `response.kind`: a string for \"text\",\n\"buttons\" and \"choice\"; true or false for \"confirm\"; an array of strings for\n\"multi_choice\"; and { \"action\", \"text\" } for \"form\". Narrow on `response.kind` and the\nvalue is whichever of those it says. The server checks every answer against the request\nthat asked for it, so a \"choice\" value is always one of the options you offered and a\n\"multi_choice\" always respects your min and max \u2014 you do not need to re-validate it.\n\nFor a \"form\", USE `value.text` AND NOT YOUR DRAFT. The whole point of the kind is that\nyour owner may have rewritten it, and `value.action` tells you only what they decided,\nnot what they decided about. `value.action` is one of the options you offered, so a\n\"Reject\" is a real answer: do not send anything.\n\n\"timeout\" means nobody answered in time and \"cancelled\" means your owner dismissed the\nprompt. NEITHER IS PERMISSION. Do not do the thing you asked about; post an update\nsaying you are blocked, or stop.\n\nOn failure: \"invalid_argument\" means the request contradicts itself \u2014 options on a\nconfirm, a choice with no options, a min above its max \u2014 and the message says which.\n\"not_found\" means the channel or update you named does not exist.",
+   "description": "Stop and ask the human who owns this dashboard for something only they can supply, then\nwait for the answer. The prompt appears immediately in a banner at the top of their\ndashboard, above everything else, with the control your `kind` calls for.\n\nPick the kind by what you need back:\n- kind \"text\" -> a string. A commit message, a name, a value you are missing.\n  Optional placeholder, multiline, default, min and max (character bounds).\n- kind \"confirm\" -> true or false. Permission to do something consequential.\n- kind \"buttons\" -> one of your options. \"retry\" / \"skip\" / \"abort\".\n- kind \"choice\" -> one of your options, chosen from a list.\n- kind \"multi_choice\" -> a list of your options. Use min and max to bound how many.\n- kind \"form\" -> { action, text }: your own action buttons plus one editable field, so\n  your owner can change what you drafted and then decide about it in one step. Put the\n  draft in `default`, the buttons in `options`, and name the field with `label`. This\n  is the kind to use for \"here is the Slack message I am about to send\" \u2014 asking for\n  approval and asking for edits separately means one of the two is answered about text\n  that has already changed.\n\nArguments: kind and question are required. detail is the longer explanation.\noptions is required for buttons, choice, multi_choice and form, and refused for the\nrest. placeholder, multiline, label, default, min, max are the kind-specific knobs\nlisted above.\noption_media makes it a picture question: { option: media_id } puts an uploaded image\non that option (buttons, choice, multi_choice), and your owner picks the picture.\nchannel (a slug or id; `project`, its older name, still works) and update (an update\nid) say what the request is about.\nmessage_id asks *inside a thread*: pass the id of the message you were replying to and\nthe question appears in that conversation, under the words that led to it, rather than\nas a card of its own. Use it whenever the question came out of something you were\ndiscussing \u2014 it is the difference between \"what about this?\" answered in context and\na prompt your owner has to reconstruct.\ntimeout_s is how long the request stays answerable, one hour by default.\npriority is \"low\", \"medium\" (the default), \"high\" or \"critical\". \"critical\" PAGES YOUR\nOWNER: their phone rings through silent mode and Do Not Disturb, even at night. Use it\nonly when your owner has explicitly told you to use critical, and only when it is\nabsolutely necessary. Never pick it on your own.\n\nmedia_ids and embeds put things on the card, exactly as they do on an update: the\nscreenshot the question is about, the Slack message you are asking whether to send.\n\"Does this look right\" is a question you cannot ask without the thing being looked at.\nmedia_ids are ids from create_upload whose bytes you have already PUT; embeds are\n{ type, data, source_url? }, and list_embed_types says which looks exist.\n\nrefs shows other cards inside the question: up to 8, each { kind, id }, kind \"update\",\n\"message\" or \"request\". Your owner sees each as a small preview, its first picture or\nvideo playing in place, and taps it to open that card's thread. It is how you ask\nabout something you posted elsewhere without posting it twice: reply on the card for\nthe work with the video (post_message with update_id and media_ids), then call\nrequest_input with refs [{ kind: \"message\", id: <that reply's id> }] and ask \"Does\nthis look right?\". The video sits inside the question. A card you cannot read, or one\nalready removed, is refused.\n\nHOW THE WAITING WORKS. READ THIS BEFORE YOU CALL IT.\n\nA human is slower than your tool timeout, so this call does not hold open until they\nclick. It parks for up to 55 seconds and then returns one of these:\n\n  { \"state\": \"answered\", \"request_id\", \"response\": { \"kind\", \"value\" }, \"answered_at\" }\n  { \"state\": \"pending\",  \"request_id\", \"poll_after_ms\" }\n  { \"state\": \"timeout\",  \"request_id\" }\n  { \"state\": \"cancelled\", \"request_id\" }\n\nIf state is \"pending\" NOBODY HAS ANSWERED YET AND YOU ARE NOT FINISHED WAITING. Call\nawait_request({ request_id }) with the id you were given, and keep calling it for as\nlong as it keeps answering \"pending\". Each call parks for another 55 seconds, so a loop\nof them costs nothing while it waits. Stop looping only when state is \"answered\",\n\"timeout\" or \"cancelled\".\n\nYour owner can also reply to the question rather than answer it \u2014 \"why do you want to\ndo that?\". That arrives as a message carrying this request_id; answer it with\npost_message({ request_id }) and keep waiting. Talking is not answering, and the state\nstays \"pending\" until they decide.\n\nThe wait survives your own restart: the request lives in the dashboard database, not in\nthis connection. If you crash mid-wait, call await_request with the request_id when you\ncome back and you resume exactly where you were.\n\nREADING THE ANSWER. `response.value` is typed by `response.kind`: a string for \"text\",\n\"buttons\" and \"choice\"; true or false for \"confirm\"; an array of strings for\n\"multi_choice\"; and { \"action\", \"text\" } for \"form\". Narrow on `response.kind` and the\nvalue is whichever of those it says. The server checks every answer against the request\nthat asked for it, so a \"choice\" value is always one of the options you offered and a\n\"multi_choice\" always respects your min and max \u2014 you do not need to re-validate it.\n\nFor a \"form\", USE `value.text` AND NOT YOUR DRAFT. The whole point of the kind is that\nyour owner may have rewritten it, and `value.action` tells you only what they decided,\nnot what they decided about. `value.action` is one of the options you offered, so a\n\"Reject\" is a real answer: do not send anything.\n\n\"timeout\" means nobody answered in time and \"cancelled\" means your owner dismissed the\nprompt. NEITHER IS PERMISSION. Do not do the thing you asked about; post an update\nsaying you are blocked, or stop.\n\nOn failure: \"invalid_argument\" means the request contradicts itself \u2014 options on a\nconfirm, a choice with no options, a min above its max \u2014 and the message says which.\n\"not_found\" means the channel or update you named does not exist.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -1367,6 +1475,33 @@
      "channel": {
       "description": "A channel slug or id, so the prompt says what this is about.",
       "type": "string"
+     },
+     "refs": {
+      "description": "Other cards to show inside the question, each { kind, id }, at most 8: say, the reply you just posted with the video in it. Your owner sees each as a small preview and taps it to open its thread. A card you cannot read, or one already removed, refuses the request.",
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "update",
+          "message",
+          "request"
+         ],
+         "description": "What the card is: an update (post_update), a message (post_message) or a request (request_input)."
+        },
+        "id": {
+         "type": "string",
+         "description": "Its id, as the tool that made it returned it (a request's is its request_id)."
+        }
+       },
+       "required": [
+        "kind",
+        "id"
+       ]
+      }
      }
     },
     "required": [
@@ -1412,7 +1547,7 @@
   {
    "name": "edit_request",
    "title": "Correct a question you are waiting on",
-   "description": "Rewrite a request_input prompt that is still waiting for an answer. Use it when the\nquestion was wrong or has moved on while you waited: a draft with a mistake in it, an\noption that turned out not to be available, an explanation that missed something your\nowner needs in order to decide.\n\nArguments:\n- request_id (required): the id request_input gave you. Yours only.\n- question (optional): the replacement question, at most 500\n  characters.\n- detail (optional): the replacement explanation, at most 4000\n  characters, or null to remove it.\n- options (optional): the replacement options, for buttons, choice, multi_choice and a\n  form`s action buttons. Replaces the whole list.\n- default (optional): the replacement pre-filled value \u2014 for a form, the draft sitting\n  in the field. Null clears it.\n\nAt least one of them must be given. The kind cannot change: it decides which control\nyour owner is looking at. If that is what is wrong, withdraw_request and ask again.\n\nYour wait is unaffected. Nothing is settled by an edit, so keep the await_request loop\nrunning exactly as before. The card stays where it is and is marked as edited, because\nan owner half way through deciding has to be able to see that the question moved.\n\nOne thing to weigh: your owner may already be typing into that field. Editing the\ndefault replaces what is on their screen only if they have not touched it \u2014 but a\nquestion that changes under somebody mid-answer is disorienting, so if they have\nstarted, prefer to say what changed in a reply on the question (post_message with its\nrequest_id) and leave the prompt alone.\n\nReturns { request: { id, kind, question, detail, options, project_id, update_id,\nmessage_id, expires_at } }.\n\nOn failure: \"not_found\" means no request has that id; \"invalid_argument\" means it is not\nyours, that you passed values this kind does not take, or that you changed nothing;\n\"conflict\" means it has already ended \u2014 answered, dismissed, withdrawn or timed out.\nA conflict is worth reading rather than retrying: if they answered while you were\nediting, that answer stands and await_request will give it to you.",
+   "description": "Rewrite a request_input prompt that is still waiting for an answer. Use it when the\nquestion was wrong or has moved on while you waited: a draft with a mistake in it, an\noption that turned out not to be available, an explanation that missed something your\nowner needs in order to decide.\n\nArguments:\n- request_id (required): the id request_input gave you. Yours only.\n- question (optional): the replacement question, at most 500\n  characters.\n- detail (optional): the replacement explanation, at most 4000\n  characters, or null to remove it.\n- options (optional): the replacement options, for buttons, choice, multi_choice and a\n  form`s action buttons. Replaces the whole list.\n- default (optional): the replacement pre-filled value \u2014 for a form, the draft sitting\n  in the field. Null clears it.\n- refs (optional): the cards it shows from now on, each { kind, id }, at most 8, as on\n  request_input. It replaces the list; [] takes them all off.\n\nAt least one of them must be given. The kind cannot change: it decides which control\nyour owner is looking at. If that is what is wrong, withdraw_request and ask again.\n\nYour wait is unaffected. Nothing is settled by an edit, so keep the await_request loop\nrunning exactly as before. The card stays where it is and is marked as edited, because\nan owner half way through deciding has to be able to see that the question moved.\n\nOne thing to weigh: your owner may already be typing into that field. Editing the\ndefault replaces what is on their screen only if they have not touched it \u2014 but a\nquestion that changes under somebody mid-answer is disorienting, so if they have\nstarted, prefer to say what changed in a reply on the question (post_message with its\nrequest_id) and leave the prompt alone.\n\nReturns { request: { id, kind, question, detail, options, project_id, update_id,\nmessage_id, expires_at } }.\n\nOn failure: \"not_found\" means no request has that id; \"invalid_argument\" means it is not\nyours, that you passed values this kind does not take, or that you changed nothing;\n\"conflict\" means it has already ended \u2014 answered, dismissed, withdrawn or timed out.\nA conflict is worth reading rather than retrying: if they answered while you were\nediting, that answer stands and await_request will give it to you.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -1457,6 +1592,33 @@
         "type": "null"
        }
       ]
+     },
+     "refs": {
+      "description": "The cards this one points at from now on, each { kind, id }, at most 8. It replaces the whole list; [] takes them all off. Leave it out to keep them.",
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "update",
+          "message",
+          "request"
+         ],
+         "description": "What the card is: an update (post_update), a message (post_message) or a request (request_input)."
+        },
+        "id": {
+         "type": "string",
+         "description": "Its id, as the tool that made it returned it (a request's is its request_id)."
+        }
+       },
+       "required": [
+        "kind",
+        "id"
+       ]
+      }
      }
     },
     "required": [
