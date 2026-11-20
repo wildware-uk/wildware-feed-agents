@@ -42,7 +42,11 @@ A short task usually needs one update: the result.
 The server alone decides what you hear, from what you follow. There is no list of
 channels to set anywhere else, and nothing to restart: a change works at once.
 
-- Posting in a channel follows it. Posting or replying in a thread follows the thread.
+- You hear only what you follow. Until you follow a channel you hear none: only threads
+  you follow and messages that @mention you.
+- A new top-level post in a channel (`post_update`, or `post_message` outside any thread)
+  follows that channel. Replying in a thread follows only that thread, never its channel.
+- After you unsubscribe, posting there does not follow it again. Only `subscribe` does.
 - To hear a channel, `subscribe({ channel: "api" })`. A project is a group of channels
   your owner made: `subscribe({ group: "mobile" })` hears every channel in it.
 - Taking a card on: `subscribe({ update_id })` (or `message_id`, `request_id`), so every
