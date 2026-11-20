@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { claimEnv, connection, headers, readSettings, sameConnection, secretFailure, secretTarget, sessionStart, settingsFrom } from './cli';
+import { claimEnv, connection, dataDirFor, headers, readSettings, sameConnection, secretFailure, secretTarget, sessionStart, settingsFrom } from './cli';
 import { SecretError } from './secret';
 import { Store } from './store';
 
@@ -43,6 +43,23 @@ describe('the SessionStart hook', () => {
 		expect(JSON.parse(saved)).toEqual({ url: URL_, monitor: 'auto' });
 		expect(saved).not.toContain('pasted-token');
 		expect(s.optionToken()).toBe('pasted-token');
+	});
+});
+
+describe('where an installed copy keeps its data', () => {
+	it('finds the folder Claude Code gives the plugin, from where the script is installed', () => {
+		const script = join('/opt/me/.claude/plugins/cache/wildware-feed/wildware-feed/1.0.0/bin/feed.mjs');
+		expect(dataDirFor(script)).toBe(join('/opt/me/.claude/plugins/data/wildware-feed-wildware-feed'));
+	});
+
+	it('keeps the marketplace in the name, made safe for a folder', () => {
+		expect(dataDirFor('/x/plugins/cache/my.market/wildware-feed/abc123/bin/feed.mjs')).toBe(join('/x/plugins/data/wildware-feed-my-market'));
+	});
+
+	it('gives up anywhere else, so --data is still needed', () => {
+		expect(dataDirFor(undefined)).toBeNull();
+		expect(dataDirFor('/opt/code/wildware-feed-agents/plugins/wildware-feed/bin/feed.mjs')).toBeNull();
+		expect(dataDirFor('/x/plugins/cache/m/p/1.0.0/feed.mjs')).toBeNull();
 	});
 });
 

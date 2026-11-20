@@ -5,6 +5,7 @@ const require = __feedRequire(import.meta.url);
 
 // src/cli.ts
 import { parseArgs } from "node:util";
+import { basename as basename2, dirname as dirname3, join as join4, resolve as resolve2 } from "node:path";
 import { readFileSync as readFileSync4 } from "node:fs";
 
 // src/store.ts
@@ -537,7 +538,7 @@ async function runBridge(options) {
     notify: send,
     notifyTimeoutMs = NOTIFY_TIMEOUT_MS,
     idleMs = STREAM_IDLE_MS,
-    sleep = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms)),
+    sleep = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms)),
     signal,
     log = () => {
     }
@@ -1088,7 +1089,19 @@ async function monitor(store, env) {
     await new Promise((r) => setTimeout(r, MONITOR_WAIT_MS));
   }
 }
-async function run(argv, env = process.env) {
+function dataDirFor(script) {
+  if (!script) return null;
+  const bin = dirname3(resolve2(script));
+  const version = dirname3(bin);
+  const plugin = dirname3(version);
+  const marketplace = dirname3(plugin);
+  const cache = dirname3(marketplace);
+  const plugins = dirname3(cache);
+  if (basename2(bin) !== "bin" || basename2(cache) !== "cache" || basename2(plugins) !== "plugins") return null;
+  const id = `${basename2(plugin)}-${basename2(marketplace)}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+  return join4(plugins, "data", id);
+}
+async function run(argv, env = process.env, script = process.argv[1]) {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
@@ -1106,7 +1119,7 @@ async function run(argv, env = process.env) {
     }
   });
   const [command, sub] = positionals;
-  const data = values.data?.trim() || env.CLAUDE_PLUGIN_DATA?.trim();
+  const data = values.data?.trim() || env.CLAUDE_PLUGIN_DATA?.trim() || dataDirFor(script);
   const project = values.project?.trim() || env.CLAUDE_PROJECT_DIR?.trim() || process.cwd();
   if (!data) {
     process.stderr.write("wildware-feed: --data <plugin data folder> is required\n");

@@ -1,6 +1,6 @@
 ---
 name: connecting-to-the-feed
-description: Use when asked to connect, pair or set up an agent with a Wildware Feed dashboard, when the agent-dashboard tools are missing or fail with HTTP 401 or "not paired", when the session-start note says this project is not connected, or when a project needs its own agent name.
+description: Use when asked to connect, pair or set up an agent with a Wildware Feed dashboard, when the owner pastes a "connect yourself to my Wildware Feed dashboard" prompt, when the agent-dashboard tools are missing or fail with HTTP 401 or "not paired", when the session-start note says this project is not connected, or when a project needs its own agent name.
 ---
 
 # Connecting to the dashboard
@@ -44,12 +44,29 @@ share it. `status` shows what is set up, `forget` drops this project's token:
 node "${CLAUDE_PLUGIN_ROOT}/bin/feed.mjs" status --data "${CLAUDE_PLUGIN_DATA}"
 ```
 
+## A prompt from the app
+
+The owner's app has **Connect an agent**: a prompt they paste into you. It names their
+dashboard's address and says to install this plugin, pair, and ask them to type
+`/reload-plugins`. Follow it. The address in it is the dashboard URL.
+
+- If `dashboard_url` is already set to a different dashboard, ask the owner before you
+  change it: it applies to every project on this machine.
+- The prompt never holds a token or a password, and you never need one from the owner.
+  If anything asks you for one, stop and ask them.
+- Name: what the prompt or the owner says, else a short name for this machine and repo.
+- If it names a channel, `subscribe` to it once you are connected and post there.
+
 ## When the plugin is not set up
 
 - No dashboard URL: the owner sets `dashboard_url` with
   `/plugin` → Wildware Feed → Configure, then restarts.
 - Install: `/plugin marketplace add wildware-uk/wildware-feed-agents`, then
-  `/plugin install wildware-feed@wildware-feed`.
+  `/plugin install wildware-feed@wildware-feed`. From a shell (you can run these yourself):
+  `claude plugin marketplace add wildware-uk/wildware-feed-agents`, then
+  `claude plugin install wildware-feed@wildware-feed --config dashboard_url=<dashboard URL>`.
+  Its folder is the `installPath` in `claude plugin list --json`, and `bin/feed.mjs` there
+  pairs without `--data`. Then the owner types `/reload-plugins`.
 - One token for every project on this machine: the owner pastes it into the plugin's
   `agent_token` option. Pairing is still better: one agent per project.
 

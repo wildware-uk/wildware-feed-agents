@@ -12,7 +12,9 @@ The dashboard's MCP server is `<dashboard URL>/mcp` (Streamable HTTP), named
 pairing: you ask to join, the owner taps Allow in their app, and you collect the token
 once. Never ask the owner to paste a token into the chat, and never post one anywhere.
 
-Dashboard URL: the one the owner gave you, else `AGENT_DASHBOARD_URL`.
+Dashboard URL: the one the owner gave you, else `AGENT_DASHBOARD_URL`. A prompt the owner
+copied from the app's **Connect an agent** names it; that prompt never holds a token, and you
+never need one from the owner.
 
 ## Pair over HTTP (no token yet)
 

@@ -13,8 +13,12 @@
  *
  * Every command takes `--data <plugin data dir>` and `--project <dir>`; the
  * plugin's own files pass `${CLAUDE_PLUGIN_DATA}` and `${CLAUDE_PROJECT_DIR}`.
+ * Without `--data`, an installed copy finds its own data folder (see
+ * [dataDirFor]), so an agent that has only just installed the plugin can pair
+ * before anything reloads it.
  */
 import { parseArgs } from 'node:util';
+import { basename, dirname, join, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { sameOrigin, Store, writeSecret, type Resolved } from './store';
 import { startPairing, waitForPairing } from './pair';
@@ -226,7 +230,27 @@ async function monitor(store: Store, env: NodeJS.ProcessEnv): Promise<void> {
 	}
 }
 
-export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env): Promise<number> {
+/**
+ * The data folder Claude Code gives an installed plugin, worked out from where
+ * this script sits: an installed copy lives at
+ * `<config>/plugins/cache/<marketplace>/<plugin>/<version>/bin/feed.mjs`, and its
+ * data at `<config>/plugins/data/<plugin>-<marketplace>`. Null for any other
+ * place (a checkout, `--plugin-dir`), where `--data` is still needed.
+ */
+export function dataDirFor(script: string | undefined): string | null {
+	if (!script) return null;
+	const bin = dirname(resolve(script));
+	const version = dirname(bin);
+	const plugin = dirname(version);
+	const marketplace = dirname(plugin);
+	const cache = dirname(marketplace);
+	const plugins = dirname(cache);
+	if (basename(bin) !== 'bin' || basename(cache) !== 'cache' || basename(plugins) !== 'plugins') return null;
+	const id = `${basename(plugin)}-${basename(marketplace)}`.replace(/[^a-zA-Z0-9_-]/g, '-');
+	return join(plugins, 'data', id);
+}
+
+export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env, script: string | undefined = process.argv[1]): Promise<number> {
 	const { values, positionals } = parseArgs({
 		args: argv,
 		allowPositionals: true,
@@ -244,7 +268,7 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
 		}
 	});
 	const [command, sub] = positionals;
-	const data = values.data?.trim() || env.CLAUDE_PLUGIN_DATA?.trim();
+	const data = values.data?.trim() || env.CLAUDE_PLUGIN_DATA?.trim() || dataDirFor(script);
 	const project = values.project?.trim() || env.CLAUDE_PROJECT_DIR?.trim() || process.cwd();
 	if (!data) {
 		process.stderr.write('wildware-feed: --data <plugin data folder> is required\n');
