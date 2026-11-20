@@ -1,7 +1,7 @@
 /**
  * Entry point for `bin/channel.mjs`, the channel Claude Code spawns over stdio.
  *
- * The URL and the subscription come from the plugin's options through the MCP
+ * The URL comes from the plugin's options through the MCP
  * config's `env`; the token comes from the store, so a project paired after the
  * session started is heard without a restart.
  */
@@ -20,7 +20,6 @@ const store = Store.for(data, values.project?.trim() || process.env.CLAUDE_PROJE
 const settings = readSettings(store);
 const env = claimEnv(store, {
 	...process.env,
-	AGENT_DASHBOARD_URL: process.env.AGENT_DASHBOARD_URL?.trim() || settings?.url || '',
-	AGENT_DASHBOARD_PROJECTS: process.env.AGENT_DASHBOARD_PROJECTS?.trim() || settings?.projects || ''
+	AGENT_DASHBOARD_URL: process.env.AGENT_DASHBOARD_URL?.trim() || settings?.url || ''
 });
 await main(env, () => store.resolve(env, env.AGENT_DASHBOARD_URL)?.token ?? null);

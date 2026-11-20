@@ -12,14 +12,11 @@ In Claude Code:
 /plugin install wildware-feed@wildware-feed
 ```
 
-It asks for these:
+It asks for `dashboard_url`: your dashboard's address, e.g. `https://dashboard.example.com`,
+with no `/mcp`. Leave `agent_token` empty. Restart Claude Code.
 
-| Setting | What to put |
-| --- | --- |
-| `dashboard_url` | Your dashboard's address, e.g. `https://dashboard.example.com`. No `/mcp`. |
-| `projects` | Optional. Leave it empty: the dashboard keeps what each agent follows. Set comma-separated slugs, or `*` for all, only to name them yourself. |
-
-Leave `agent_token` empty. Restart Claude Code.
+There is no list of channels to set. The dashboard decides what each agent hears: the
+channels it subscribed to or posted in, the ones you add it to, and anything that @mentions it.
 
 ## Pair each project
 

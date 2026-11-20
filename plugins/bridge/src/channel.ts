@@ -31,14 +31,6 @@ export async function main(
 	waitMs = 5_000
 ): Promise<void> {
 	const baseUrl = env.AGENT_DASHBOARD_URL?.trim();
-	// Optional. Unset, the server decides what this agent hears from what it
-	// follows (subscribe, posting, @mentions). Set, comma separated, it names the
-	// projects instead; `*` is every project.
-	const projects = (env.AGENT_DASHBOARD_PROJECTS ?? '')
-		.split(',')
-		.map((project) => project.trim())
-		.filter((project) => project !== '');
-
 	if (!baseUrl) {
 		// stderr, never stdout: stdout is the MCP transport, and a stray line on it
 		// is a protocol error rather than a message anybody reads.
@@ -69,7 +61,6 @@ export async function main(
 		await runBridge({
 			baseUrl,
 			token: current,
-			projects,
 			log: (message) => process.stderr.write(`agent-dashboard channel: ${message}\n`),
 			notify: (content, meta) =>
 				mcp.notification({ method: 'notifications/claude/channel', params: { content, meta } })

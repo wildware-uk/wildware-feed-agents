@@ -17071,9 +17071,11 @@ var INSTRUCTIONS = [
   "  line or option and which card; get_blocks reads the whole block, and update_block",
   "  changes it in place. Act on it if it unblocks you; nothing is owed back.",
   "",
-  "The server keeps what you follow. Posting in a project or thread follows it, and an",
-  "@mention follows that thread for you. Call subscribe / unsubscribe when you take on or",
-  "finish something, and list_subscriptions to see what you follow.",
+  "The server alone decides what you hear, from what you follow. Posting in a channel or",
+  "thread follows it, and an @mention follows that thread for you. Call subscribe /",
+  "unsubscribe when you take on or finish something; your owner can also add you to a",
+  "channel or take you off one. list_subscriptions shows what you follow. A message that",
+  "names you with @your-name always reaches you.",
   "",
   "These are one-way notifications: there is no reply tool on this channel, and nothing is",
   "expected back through it. A count that drops to zero means the work is done or was",
@@ -17261,9 +17263,6 @@ async function runBridge(options) {
   } = options;
   if (!send) throw new Error("runBridge needs a notify function");
   const endpoint = new URL("/api/agent/stream", baseUrl);
-  for (const project of options.projects) {
-    if (project.trim() !== "") endpoint.searchParams.append("project", project.trim());
-  }
   const clientId = options.clientId ?? newClientId();
   endpoint.searchParams.set("client", clientId);
   const url = endpoint.toString();
@@ -17476,7 +17475,6 @@ function createChannelServer() {
 }
 async function main(env2 = process.env, token = () => env2.AGENT_DASHBOARD_TOKEN?.trim() || null, waitMs = 5e3) {
   const baseUrl = env2.AGENT_DASHBOARD_URL?.trim();
-  const projects = (env2.AGENT_DASHBOARD_PROJECTS ?? "").split(",").map((project) => project.trim()).filter((project) => project !== "");
   if (!baseUrl) {
     process.stderr.write("agent-dashboard channel: set AGENT_DASHBOARD_URL (the plugin's dashboard_url)\n");
     process.exitCode = 1;
@@ -17496,7 +17494,6 @@ async function main(env2 = process.env, token = () => env2.AGENT_DASHBOARD_TOKEN
     await runBridge({
       baseUrl,
       token: current,
-      projects,
       log: (message) => process.stderr.write(`agent-dashboard channel: ${message}
 `),
       notify: (content, meta2) => mcp.notification({ method: "notifications/claude/channel", params: { content, meta: meta2 } })
@@ -17646,7 +17643,6 @@ function readSettings(store2) {
     const parsed = JSON.parse(readFileSync3(store2.connectionPath, "utf8"));
     return {
       url: typeof parsed.url === "string" ? parsed.url : null,
-      projects: typeof parsed.projects === "string" ? parsed.projects : "",
       monitor: parsed.monitor === "off" ? "off" : "auto"
     };
   } catch {
@@ -17668,7 +17664,6 @@ var store = Store.for(data, values.project?.trim() || process.env.CLAUDE_PROJECT
 var settings = readSettings(store);
 var env = claimEnv(store, {
   ...process.env,
-  AGENT_DASHBOARD_URL: process.env.AGENT_DASHBOARD_URL?.trim() || settings?.url || "",
-  AGENT_DASHBOARD_PROJECTS: process.env.AGENT_DASHBOARD_PROJECTS?.trim() || settings?.projects || ""
+  AGENT_DASHBOARD_URL: process.env.AGENT_DASHBOARD_URL?.trim() || settings?.url || ""
 });
 await main(env, () => store.resolve(env, env.AGENT_DASHBOARD_URL)?.token ?? null);

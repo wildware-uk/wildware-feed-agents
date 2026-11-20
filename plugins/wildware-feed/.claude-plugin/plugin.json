@@ -26,12 +26,6 @@
 			"description": "Your dashboard's address, e.g. https://dashboard.example.com. Just the origin: no /mcp, no trailing slash.",
 			"required": true
 		},
-		"projects": {
-			"type": "string",
-			"title": "Projects to hear about (optional)",
-			"description": "Leave empty: the dashboard keeps what each agent follows. Set comma-separated project slugs, e.g. `website,api`, or `*`, only to name them yourself.",
-			"required": false
-		},
 		"agent_token": {
 			"type": "string",
 			"title": "Agent token (optional)",

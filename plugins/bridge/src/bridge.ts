@@ -23,7 +23,7 @@
  * message even concerns what it is doing, and an agent woken by a project it
  * has never touched learns to ignore the channel. So a message arrives with its
  * text, its ids and its project on the tag, and the dashboard only sends the
- * ones belonging to projects that agent actually works in.
+ * ones in channels and threads that agent follows.
  *
  * The tools still do the rest: `get_messages` is the only thing that marks
  * anything read, and tasks and approvals are still counts pointing at
@@ -244,9 +244,11 @@ export const INSTRUCTIONS = [
 	'  line or option and which card; get_blocks reads the whole block, and update_block',
 	'  changes it in place. Act on it if it unblocks you; nothing is owed back.',
 	'',
-	'The server keeps what you follow. Posting in a project or thread follows it, and an',
-	'@mention follows that thread for you. Call subscribe / unsubscribe when you take on or',
-	'finish something, and list_subscriptions to see what you follow.',
+	'The server alone decides what you hear, from what you follow. Posting in a channel or',
+	'thread follows it, and an @mention follows that thread for you. Call subscribe /',
+	'unsubscribe when you take on or finish something; your owner can also add you to a',
+	'channel or take you off one. list_subscriptions shows what you follow. A message that',
+	'names you with @your-name always reaches you.',
 	'',
 	'These are one-way notifications: there is no reply tool on this channel, and nothing is',
 	'expected back through it. A count that drops to zero means the work is done or was',
@@ -304,13 +306,6 @@ export type BridgeOptions = {
 	baseUrl: string;
 	/** The agent's bearer token — the same one its MCP config uses. */
 	token: string;
-	/**
-	 * Which projects this session is for, when the owner named them. Empty is the
-	 * usual case: the stream then carries no `project` parameter, and the server
-	 * sends what this agent follows (subscribe, posting, @mentions), read afresh
-	 * on every event. `['*']` asks for every project.
-	 */
-	projects: readonly string[];
 	/**
 	 * What this bridge calls itself on the stream, stable for its own lifetime.
 	 *
@@ -665,9 +660,9 @@ export async function runBridge(options: BridgeOptions): Promise<void> {
 	if (!send) throw new Error('runBridge needs a notify function');
 
 	const endpoint = new URL('/api/agent/stream', baseUrl);
-	for (const project of options.projects) {
-		if (project.trim() !== '') endpoint.searchParams.append('project', project.trim());
-	}
+	// No channel list on the URL: the server alone decides what this agent hears,
+	// from what it follows (subscribe, posting, @mentions, the owner adding it),
+	// read afresh on every event.
 	// Named once, outside the reconnect loop: every reconnect is the same client,
 	// which is what makes "already delivered" mean "this session has it" rather
 	// than "somebody holding this token has it".

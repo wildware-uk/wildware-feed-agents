@@ -42,17 +42,21 @@ describe('marketplace and manifest', () => {
 		expect(marketplace.name).toBe('wildware-feed');
 	});
 
-	it('only asks for the URL; projects are optional because the server keeps subscriptions, the token because pairing provides it', () => {
+	it('only asks for the URL; the token is optional because pairing provides it', () => {
 		expect(manifest.userConfig.dashboard_url.required).toBe(true);
-		expect(manifest.userConfig.projects.required).toBe(false);
 		expect(manifest.userConfig.agent_token.required).toBe(false);
 		expect(manifest.userConfig.agent_token.sensitive).toBe(true);
 	});
 
 	it('never puts an optional setting in the MCP config, where an unset option would drop the server', () => {
 		expect(JSON.stringify(mcp)).not.toContain('agent_token');
-		expect(JSON.stringify(mcp)).not.toContain('user_config.projects');
+		expect(JSON.stringify(mcp)).not.toContain('projects');
 		expect(mcp.mcpServers['agent-dashboard'].headersHelper).toContain('${CLAUDE_PROJECT_DIR}');
+	});
+
+	it('names no channels: the server alone decides what an agent hears', () => {
+		expect(Object.keys(manifest.userConfig)).not.toContain('projects');
+		expect(JSON.stringify(mcp)).not.toContain('PROJECTS');
 	});
 
 	it('declares the channel it ships', () => {

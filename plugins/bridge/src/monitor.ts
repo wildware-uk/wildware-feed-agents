@@ -60,7 +60,6 @@ export function oneLine(content: string, max = LINE_MAX): string {
 export type MonitorOptions = {
 	baseUrl: string;
 	token: string;
-	projects: readonly string[];
 	/** Test seam: where a line goes. Defaults to stdout. */
 	write?: (line: string) => void;
 	/** Test seam: diagnostics. Defaults to stderr. */
@@ -124,7 +123,6 @@ export async function runMonitor(options: MonitorOptions): Promise<void> {
 	await runBridge({
 		baseUrl: options.baseUrl,
 		token: options.token,
-		projects: options.projects,
 		fetch: options.fetch,
 		sleep: options.sleep,
 		signal: options.signal,

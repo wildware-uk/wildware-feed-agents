@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { claimEnv, connection, headers, sessionStart, settingsFrom } from './cli';
+import { claimEnv, connection, headers, readSettings, sessionStart, settingsFrom } from './cli';
 import { Store } from './store';
 
 const URL_ = 'https://dashboard.example.com';
@@ -36,11 +36,10 @@ describe('the SessionStart hook', () => {
 		const s = store();
 		sessionStart(s, {
 			CLAUDE_PLUGIN_OPTION_DASHBOARD_URL: `${URL_}/mcp`,
-			CLAUDE_PLUGIN_OPTION_PROJECTS: '*',
 			CLAUDE_PLUGIN_OPTION_AGENT_TOKEN: 'pasted-token'
 		});
 		const saved = readFileSync(s.connectionPath, 'utf8');
-		expect(JSON.parse(saved)).toEqual({ url: URL_, projects: '*', monitor: 'auto' });
+		expect(JSON.parse(saved)).toEqual({ url: URL_, monitor: 'auto' });
 		expect(saved).not.toContain('pasted-token');
 		expect(s.optionToken()).toBe('pasted-token');
 	});
@@ -50,7 +49,6 @@ describe('settings', () => {
 	it('take the plugin options first and AGENT_DASHBOARD_* second', () => {
 		expect(settingsFrom({ AGENT_DASHBOARD_URL: 'https://env.example.com', AGENT_DASHBOARD_MONITOR: 'OFF' })).toEqual({
 			url: 'https://env.example.com',
-			projects: '',
 			monitor: 'off'
 		});
 		expect(
@@ -70,20 +68,22 @@ describe('the header helper', () => {
 });
 
 describe('what the monitor connects with', () => {
-	it('waits for a URL and a token, and passes on projects only when the owner named them', () => {
+	it('waits for a URL and a token, and names no channels: the server keeps what the agent follows', () => {
 		const s = store();
 		expect(connection(s, {})).toBeNull();
-		sessionStart(s, { CLAUDE_PLUGIN_OPTION_DASHBOARD_URL: URL_, CLAUDE_PLUGIN_OPTION_PROJECTS: 'app, web' });
+		sessionStart(s, { CLAUDE_PLUGIN_OPTION_DASHBOARD_URL: URL_ });
 		expect(connection(s, {})).toBeNull();
 		pair(s);
-		expect(connection(s, {})).toEqual({ url: URL_, token: 'paired-token', projects: ['app', 'web'], monitor: 'auto' });
+		expect(connection(s, {})).toEqual({ url: URL_, token: 'paired-token', monitor: 'auto' });
 	});
 
-	it('needs no projects: the server keeps what the agent follows', () => {
+	it('ignores a channel list, old or new: from the env, the option, or a file an older plugin saved', () => {
 		const s = store();
-		sessionStart(s, { CLAUDE_PLUGIN_OPTION_DASHBOARD_URL: URL_ });
 		pair(s);
-		expect(connection(s, {})).toEqual({ url: URL_, token: 'paired-token', projects: [], monitor: 'auto' });
+		writeFileSync(s.connectionPath, JSON.stringify({ url: URL_, projects: 'app,web', monitor: 'auto' }));
+		expect(readSettings(s)).toEqual({ url: URL_, monitor: 'auto' });
+		expect(connection(s, { AGENT_DASHBOARD_PROJECTS: '*' })).toEqual({ url: URL_, token: 'paired-token', monitor: 'auto' });
+		expect(settingsFrom({ CLAUDE_PLUGIN_OPTION_DASHBOARD_URL: URL_, CLAUDE_PLUGIN_OPTION_PROJECTS: '*' })).toEqual({ url: URL_, monitor: 'auto' });
 	});
 
 	it('keys the channel claim to the project', () => {

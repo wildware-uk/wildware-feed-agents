@@ -349,9 +349,11 @@ var INSTRUCTIONS = [
   "  line or option and which card; get_blocks reads the whole block, and update_block",
   "  changes it in place. Act on it if it unblocks you; nothing is owed back.",
   "",
-  "The server keeps what you follow. Posting in a project or thread follows it, and an",
-  "@mention follows that thread for you. Call subscribe / unsubscribe when you take on or",
-  "finish something, and list_subscriptions to see what you follow.",
+  "The server alone decides what you hear, from what you follow. Posting in a channel or",
+  "thread follows it, and an @mention follows that thread for you. Call subscribe /",
+  "unsubscribe when you take on or finish something; your owner can also add you to a",
+  "channel or take you off one. list_subscriptions shows what you follow. A message that",
+  "names you with @your-name always reaches you.",
   "",
   "These are one-way notifications: there is no reply tool on this channel, and nothing is",
   "expected back through it. A count that drops to zero means the work is done or was",
@@ -532,9 +534,6 @@ async function runBridge(options) {
   } = options;
   if (!send) throw new Error("runBridge needs a notify function");
   const endpoint = new URL("/api/agent/stream", baseUrl);
-  for (const project of options.projects) {
-    if (project.trim() !== "") endpoint.searchParams.append("project", project.trim());
-  }
   const clientId = options.clientId ?? newClientId();
   endpoint.searchParams.set("client", clientId);
   const url = endpoint.toString();
@@ -744,7 +743,6 @@ async function runMonitor(options) {
   await runBridge({
     baseUrl: options.baseUrl,
     token: options.token,
-    projects: options.projects,
     fetch: options.fetch,
     sleep: options.sleep,
     signal: options.signal,
@@ -853,14 +851,13 @@ function settingsFrom(env) {
   const pick = (option, fallback) => env[`CLAUDE_PLUGIN_OPTION_${option}`]?.trim() || env[fallback]?.trim() || "";
   const url = pick("DASHBOARD_URL", "AGENT_DASHBOARD_URL").replace(/\/+$/, "").replace(/\/mcp$/, "");
   const monitor2 = pick("MONITOR", "AGENT_DASHBOARD_MONITOR").toLowerCase() === "off" ? "off" : "auto";
-  return { url: url || null, projects: pick("PROJECTS", "AGENT_DASHBOARD_PROJECTS"), monitor: monitor2 };
+  return { url: url || null, monitor: monitor2 };
 }
 function readSettings(store) {
   try {
     const parsed = JSON.parse(readFileSync4(store.connectionPath, "utf8"));
     return {
       url: typeof parsed.url === "string" ? parsed.url : null,
-      projects: typeof parsed.projects === "string" ? parsed.projects : "",
       monitor: parsed.monitor === "off" ? "off" : "auto"
     };
   } catch {
@@ -899,12 +896,11 @@ function headers(store, env) {
 function connection(store, env) {
   const saved = readSettings(store);
   const url = env.AGENT_DASHBOARD_URL?.trim() || saved?.url;
-  const projects = (env.AGENT_DASHBOARD_PROJECTS?.trim() || saved?.projects || "").split(",").map((p) => p.trim()).filter(Boolean);
   const monitor2 = (env.AGENT_DASHBOARD_MONITOR ?? saved?.monitor ?? "auto").toLowerCase() === "off" ? "off" : "auto";
   if (!url) return null;
   const token = store.resolve(env, url);
   if (!token) return null;
-  return { url, token: token.token, projects, monitor: monitor2 };
+  return { url, token: token.token, monitor: monitor2 };
 }
 function claimEnv(store, env) {
   return { ...env, CLAUDE_PLUGIN_DATA: store.data, WILDWARE_FEED_PROJECT_KEY: store.key };
@@ -945,7 +941,7 @@ async function monitor(store, env) {
       continue;
     }
     if (found) {
-      await runMonitor({ baseUrl: found.url, token: found.token, projects: found.projects });
+      await runMonitor({ baseUrl: found.url, token: found.token });
       return;
     }
     if (!saidUnconfigured && Date.now() - started >= SAY_AFTER_MS) {

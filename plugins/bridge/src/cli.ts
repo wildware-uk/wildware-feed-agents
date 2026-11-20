@@ -22,8 +22,14 @@ import { channelIsLive, CLAIM_EVERY_MS } from './claim';
 import { runMonitor } from './monitor';
 import { getSecret, putSecret } from './secret';
 
-/** What the hook saves for the monitor. No token: that is in the store. */
-export type Settings = { url: string | null; projects: string; monitor: 'auto' | 'off' };
+/**
+ * What the hook saves for the monitor. No token: that is in the store.
+ *
+ * No channel list either: what an agent hears is decided by the server alone
+ * (what it follows). A file saved by an older plugin may still carry a
+ * `projects` field; it is ignored.
+ */
+export type Settings = { url: string | null; monitor: 'auto' | 'off' };
 
 /** The plugin's options, from the hook's environment, falling back to `AGENT_DASHBOARD_*`. */
 export function settingsFrom(env: NodeJS.ProcessEnv): Settings {
@@ -31,7 +37,7 @@ export function settingsFrom(env: NodeJS.ProcessEnv): Settings {
 		env[`CLAUDE_PLUGIN_OPTION_${option}`]?.trim() || env[fallback]?.trim() || '';
 	const url = pick('DASHBOARD_URL', 'AGENT_DASHBOARD_URL').replace(/\/+$/, '').replace(/\/mcp$/, '');
 	const monitor = pick('MONITOR', 'AGENT_DASHBOARD_MONITOR').toLowerCase() === 'off' ? 'off' : 'auto';
-	return { url: url || null, projects: pick('PROJECTS', 'AGENT_DASHBOARD_PROJECTS'), monitor };
+	return { url: url || null, monitor };
 }
 
 export function readSettings(store: Store): Settings | null {
@@ -39,7 +45,6 @@ export function readSettings(store: Store): Settings | null {
 		const parsed = JSON.parse(readFileSync(store.connectionPath, 'utf8')) as Partial<Settings>;
 		return {
 			url: typeof parsed.url === 'string' ? parsed.url : null,
-			projects: typeof parsed.projects === 'string' ? parsed.projects : '',
 			monitor: parsed.monitor === 'off' ? 'off' : 'auto'
 		};
 	} catch {
@@ -90,18 +95,14 @@ export function headers(store: Store, env: NodeJS.ProcessEnv): Record<string, st
 }
 
 /** What the monitor and channel need, or null while something is missing. */
-export function connection(store: Store, env: NodeJS.ProcessEnv): { url: string; token: string; projects: string[]; monitor: 'auto' | 'off' } | null {
+export function connection(store: Store, env: NodeJS.ProcessEnv): { url: string; token: string; monitor: 'auto' | 'off' } | null {
 	const saved = readSettings(store);
 	const url = env.AGENT_DASHBOARD_URL?.trim() || saved?.url;
-	const projects = (env.AGENT_DASHBOARD_PROJECTS?.trim() || saved?.projects || '')
-		.split(',')
-		.map((p) => p.trim())
-		.filter(Boolean);
 	const monitor = (env.AGENT_DASHBOARD_MONITOR ?? saved?.monitor ?? 'auto').toLowerCase() === 'off' ? 'off' : 'auto';
 	if (!url) return null;
 	const token = store.resolve(env, url);
 	if (!token) return null;
-	return { url, token: token.token, projects, monitor };
+	return { url, token: token.token, monitor };
 }
 
 /** The env the claim code reads: the data folder and this project's key. */
@@ -151,7 +152,7 @@ async function monitor(store: Store, env: NodeJS.ProcessEnv): Promise<void> {
 			continue;
 		}
 		if (found) {
-			await runMonitor({ baseUrl: found.url, token: found.token, projects: found.projects });
+			await runMonitor({ baseUrl: found.url, token: found.token });
 			return;
 		}
 		if (!saidUnconfigured && Date.now() - started >= SAY_AFTER_MS) {

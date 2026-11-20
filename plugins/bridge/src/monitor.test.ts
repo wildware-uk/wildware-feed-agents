@@ -67,7 +67,6 @@ describe('writing to the session', () => {
 		await runMonitor({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			write: (line) => written.push(line),
 			log: () => {},
 			fetch: fetcher as unknown as typeof globalThis.fetch,
@@ -101,12 +100,12 @@ describe('writing to the session', () => {
 		expect(written.filter((line) => !line.startsWith('agent-dashboard monitor:'))).toHaveLength(1);
 	});
 
-	it('asks for the same stream the channel does, with the same subscription', async () => {
+	it('asks for the same stream the channel does, naming no channels', async () => {
 		const { fetcher } = await monitor([work({})]);
 
 		const asked = new URL(fetcher.mock.calls[0]?.[0] as string);
 		expect(asked.origin + asked.pathname).toBe('https://dash.test/api/agent/stream');
-		expect(asked.searchParams.get('project')).toBe('*');
+		expect(asked.searchParams.has('project')).toBe(false);
 		// And it names itself, so its deliveries are its own (migration 019).
 		expect(asked.searchParams.get('client')).toMatch(/^bridge-/);
 		expect(fetcher.mock.calls[0]?.[1]?.headers).toMatchObject({
@@ -135,7 +134,6 @@ describe('saying what the monitor is doing', () => {
 		await runMonitor({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			write: (line) => written.push(line),
 			log: () => {},
 			fetch: fetcher as unknown as typeof globalThis.fetch,
@@ -189,7 +187,6 @@ describe('saying what the monitor is doing', () => {
 		await runMonitor({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			write: (line) => written.push(line),
 			log: () => {},
 			fetch: vi.fn(() =>

@@ -217,7 +217,6 @@ describe('pushing into the session', () => {
 			token: 'a-token',
 			// Every session states its scope now, so the harness states the widest
 			// one rather than leaving it out.
-			projects: ['*'],
 			fetch: fetcher as unknown as typeof globalThis.fetch,
 			notify,
 			// The loop reconnects for ever; aborting during the first backoff is how
@@ -387,7 +386,7 @@ describe('pushing into the session', () => {
 		expect(notify.mock.calls[0]?.[0]).toContain('1 unread message');
 	});
 
-	it('subscribes to the projects this session is for', async () => {
+	it('names no channel or project on the stream: the server alone decides what the agent hears', async () => {
 		const notify = vi.fn().mockResolvedValue(undefined);
 		const abort = new AbortController();
 		const fetcher = vi.fn().mockResolvedValue(new Response(sse(workFrame({})), { status: 200 }));
@@ -395,31 +394,6 @@ describe('pushing into the session', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['gardengame-mod-engine', 'garden-game'],
-			fetch: fetcher as unknown as typeof globalThis.fetch,
-			notify,
-			sleep: async () => abort.abort(),
-			signal: abort.signal
-		});
-
-		// One parameter per project rather than a joined string: the dashboard
-		// accepts either, and repeated keys need no escaping rules.
-		// The client id rides along too (migration 019), and it is minted per
-		// process, so the projects are asserted rather than the whole string.
-		const asked = new URL(fetcher.mock.calls[0]?.[0] as string);
-		expect(asked.origin + asked.pathname).toBe('https://dash.test/api/agent/stream');
-		expect(asked.searchParams.getAll('project')).toEqual(['gardengame-mod-engine', 'garden-game']);
-	});
-
-	it('names no project when none were set, so the server sends what the agent follows', async () => {
-		const notify = vi.fn().mockResolvedValue(undefined);
-		const abort = new AbortController();
-		const fetcher = vi.fn().mockResolvedValue(new Response(sse(workFrame({})), { status: 200 }));
-
-		await runBridge({
-			baseUrl: 'https://dash.test',
-			token: 'a-token',
-			projects: [],
 			fetch: fetcher as unknown as typeof globalThis.fetch,
 			notify,
 			sleep: async () => abort.abort(),
@@ -428,6 +402,7 @@ describe('pushing into the session', () => {
 
 		const asked = new URL(fetcher.mock.calls[0]?.[0] as string);
 		expect(asked.searchParams.has('project')).toBe(false);
+		expect(asked.searchParams.has('channel')).toBe(false);
 		expect(asked.searchParams.get('client')).toBeTruthy();
 	});
 
@@ -438,7 +413,7 @@ describe('pushing into the session', () => {
 		// one is a thing somebody typed rather than the absence of a setting.
 		const asked = new URL(fetcher.mock.calls[0]?.[0] as string);
 		expect(asked.origin + asked.pathname).toBe('https://dash.test/api/agent/stream');
-		expect(asked.searchParams.get('project')).toBe('*');
+		expect(asked.searchParams.has('project')).toBe(false);
 		expect(fetcher.mock.calls[0]?.[1]?.headers).toMatchObject({
 			authorization: 'Bearer a-token',
 			accept: 'text/event-stream'
@@ -505,7 +480,6 @@ describe('pushing into the session', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			fetch: fetcher as unknown as typeof globalThis.fetch,
 			notify: vi.fn(),
 			signal: abort.signal
@@ -516,8 +490,8 @@ describe('pushing into the session', () => {
 });
 
 /**
- * Starting up. `AGENT_DASHBOARD_PROJECTS` is optional: unset, the server decides what
- * this agent hears from what it follows. Only the URL is required.
+ * Starting up. Only the URL is required: the server decides what this agent hears
+ * from what it follows, and nothing on this side names channels.
  */
 describe('what main needs before it will start', () => {
 	function stderr() {
@@ -573,7 +547,6 @@ describe('the owner answering a request', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			fetch: fetcher as unknown as typeof globalThis.fetch,
 			notify,
 			sleep: async () => abort.abort(),
@@ -675,7 +648,6 @@ describe('who the bridge says it is', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['gardengame'],
 			...options,
 			fetch: fetcher as unknown as typeof globalThis.fetch,
 			notify: vi.fn().mockResolvedValue(undefined),
@@ -690,7 +662,7 @@ describe('who the bridge says it is', () => {
 		const url = await urlUsed();
 
 		expect(url.searchParams.get('client')).toMatch(/^bridge-/);
-		expect(url.searchParams.get('project')).toBe('gardengame');
+		expect(url.searchParams.has('project')).toBe(false);
 	});
 
 	it('uses the id it was given', async () => {
@@ -731,7 +703,6 @@ describe('a message with something attached', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			fetch: fetcher as unknown as typeof globalThis.fetch,
 			notify,
 			sleep: async () => abort.abort(),
@@ -811,7 +782,6 @@ describe('a message answering another one', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			fetch: fetcher as unknown as typeof globalThis.fetch,
 			notify,
 			sleep: async () => abort.abort(),
@@ -907,7 +877,6 @@ describe('a reaction from the owner', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			fetch: fetcher as unknown as typeof globalThis.fetch,
 			notify,
 			sleep: async () => abort.abort(),
@@ -999,7 +968,6 @@ describe('putting a tick or a vote into a sentence', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			fetch: fetcher as unknown as typeof globalThis.fetch,
 			notify,
 			sleep: async () => abort.abort(),
@@ -1070,7 +1038,6 @@ describe('a client that has stopped listening', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			notifyTimeoutMs: 20,
 			fetch: vi.fn().mockResolvedValue(new Response(body, { status: 200 })) as never,
 			notify,
@@ -1105,7 +1072,6 @@ describe('a client that has stopped listening', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			notifyTimeoutMs: 20,
 			fetch: vi.fn().mockResolvedValue(new Response(body, { status: 200 })) as never,
 			notify,
@@ -1178,7 +1144,6 @@ describe('surviving a long session', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			notify: () => Promise.resolve(),
 			fetch: vi.fn(() =>
 				Promise.resolve(new Response(body(), { status: 200 }))
@@ -1209,7 +1174,6 @@ describe('surviving a long session', () => {
 		await runBridge({
 			baseUrl: 'https://dash.test',
 			token: 'a-token',
-			projects: ['*'],
 			notify,
 			fetch: vi.fn(() => {
 				const frame = bodies[Math.min(call, bodies.length - 1)];
