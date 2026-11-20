@@ -344,6 +344,10 @@ var INSTRUCTIONS = [
   "  with request_id and state on the tag, so you can act on it without asking again;",
   "  await_request re-reads the row when you want the typed value in full. A state of",
   '  "timeout" or "cancelled" is not permission: it means nobody answered.',
+  "- A block event is your owner ticking a line of one of your checklists, or voting in one",
+  "  of your polls (blocks on post_update, post_message and request_input). It says which",
+  "  line or option and which card; get_blocks reads the whole block, and update_block",
+  "  changes it in place. Act on it if it unblocks you; nothing is owed back.",
   "",
   "The server keeps what you follow. Posting in a project or thread follows it, and an",
   "@mention follows that thread for you. Call subscribe / unsubscribe when you take on or",
@@ -411,6 +415,19 @@ function describeReaction(frame) {
   const where = frame.project_name ?? frame.project ?? "the dashboard";
   const verb = frame.on ? "reacted" : "removed their reaction";
   return `Your owner ${verb} ${frame.emoji} on your message (${where}): ${about}`;
+}
+function describeBlock(frame) {
+  const who = frame.by?.name ?? "Your owner";
+  const where = frame.project_name ?? frame.project ?? "the dashboard";
+  const block = frame.block_title ? `"${frame.block_title}"` : `block ${frame.block_id}`;
+  if (frame.action === "check") {
+    const line = (frame.item_text ?? frame.item_id ?? "").trim();
+    const verb = frame.done ? "ticked" : "unticked";
+    return `${who} ${verb} "${line}" on your checklist ${block} (${where}).`;
+  }
+  const chosen = (frame.options ?? []).map((o) => o.label);
+  if (chosen.length === 0) return `${who} took back their vote on your poll ${block} (${where}).`;
+  return `${who} voted for ${chosen.join(", ")} on your poll ${block} (${where}).`;
 }
 function describeAnswer(frame) {
   const question = frame.question.trim();
@@ -571,6 +588,18 @@ async function runBridge(options) {
     if (held) Object.assign(attributes, meta(held.work));
     await send2(describeReaction(frame), attributes);
   };
+  const announceBlock = async (send2, frame) => {
+    const held = pendingCounts;
+    pendingCounts = null;
+    const attributes = { block_id: frame.block_id, action: frame.action };
+    if (frame.update_id) attributes.update_id = frame.update_id;
+    if (frame.message_id) attributes.message_id = frame.message_id;
+    if (frame.request_id) attributes.request_id = frame.request_id;
+    if (frame.project) attributes.project = frame.project;
+    if (frame.item_id) attributes.item_id = frame.item_id;
+    if (held) Object.assign(attributes, meta(held.work));
+    await send2(describeBlock(frame), attributes);
+  };
   const announce = async (send2, all) => {
     const held = pendingCounts;
     pendingCounts = null;
@@ -623,6 +652,13 @@ async function runBridge(options) {
         if (frame.event === "reaction" && frame.data) {
           try {
             await announceReaction(notify, JSON.parse(frame.data));
+          } catch {
+          }
+          continue;
+        }
+        if (frame.event === "block" && frame.data) {
+          try {
+            await announceBlock(notify, JSON.parse(frame.data));
           } catch {
           }
           continue;

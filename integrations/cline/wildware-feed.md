@@ -450,6 +450,43 @@ on `post_message` and `request_input`.
 To quote a Slack message, GitHub comment or ticket, use `embeds` instead of pasting it;
 for a live, clickable interface use `apps`. See "posting-updates reference" below.
 
+### Blocks: things the app draws and keeps live
+
+`blocks` on `post_update`, `post_message` or `request_input` puts up to 8 typed pieces on
+the card. The app draws them natively and changes them in place when you call
+`update_block`, so progress is one card that moves, not a new card per step.
+
+| Use | When |
+| --- | --- |
+| `checklist` | A list of things to get done, some waiting on the owner (`owner: "you"`). They can tick lines. |
+| `steps` | A run with stages: build, test, deploy. `state` pending, running, done, failed or skipped. |
+| `diff` | A change to look at: `text` is `git diff` output. |
+| `chart` | Numbers over time or by category: `kind` line or bar. |
+| `table` | Rows to compare. The owner sorts by a column. |
+| `log` | Output worth keeping. Folds to `highlight` (the error) and the last `tail` lines. |
+| `poll` | A choice for the team. Use `request_input` when you need one answer to go on. |
+
+```
+u = post_update({ project: "app", title: "Release 1.0.9", body: "Where it stands.",
+  blocks: [
+    { id: "ship", type: "checklist", items: [
+      { id: "notes", text: "Release notes", owner: "you" },
+      { id: "tag", text: "Tag the release" } ] },
+    { id: "ci", type: "steps", stages: [
+      { id: "build", label: "Build", state: "running" },
+      { id: "test", label: "Test" } ] } ] })
+update_block({ update_id: u.update.id, block_id: "ci",
+  patch: { stages: [{ id: "build", state: "done" }, { id: "test", state: "running" }], progress: 0.5 } })
+update_block({ update_id, block_id: "build-log", patch: { append: ["line", "line"] } })
+```
+
+A patch merges lists by id (only the fields you give change), `remove: [ids]` drops
+some, `append` / `append_rows` / a series' `points` add to the end, and `null` clears a
+value. When the owner ticks a line or votes, you are told, as you are of an answer or a
+reaction; `get_blocks` reads who ticked and who voted. Every key is checked: a typo
+refuses the post, so read the error. Shapes and limits are in the same reference as
+embeds and apps.
+
 ### Correcting yourself
 
 - `edit_update({ update_id, body?, title?, level?, priority? })` when a card stops being
@@ -563,3 +600,26 @@ set_app_data({ view_id, data: { open: 1 } })       → redraws live, no new card
 
 `register_app`'s description has the full protocol and a small working example. Up to 4
 apps per card.
+
+### Blocks: shapes and limits
+
+Every block is `{ id, type, title? }` plus its type's keys. Ids are 1 to 64 letters,
+digits, `-`, `_` or `.`. At most 8 blocks per card and 100,000 characters per block.
+
+| type | keys |
+| --- | --- |
+| `checklist` | `items: [{ id, text, done?, owner? }]`, at most 100. |
+| `steps` | `stages: [{ id, label, state?, detail? }]`, at most 30; `progress` 0 to 1; `eta` an ISO time with offset. |
+| `diff` | `text` (unified diff) or `files: [{ path, old_path?, status?, hunks: ["@@ -1 +1 @@\n-a\n+b"] }]`; at most 50 files, 5,000 lines. |
+| `chart` | `kind` line or bar; `series: [{ id, label?, points: [[x, y]] }]`, at most 8 series and 500 points each (the newest kept); `x_label`, `y_label`, `unit`. Every x is a number, or every x a label. |
+| `table` | `columns: ["Name", { label, kind: "number" }]`, at most 20; `rows: [[cell, ...]]`, at most 1,000; `limit` rows shown folded (default 10). |
+| `log` | `lines` or `text`; the newest 1,000 lines kept, the rest counted; `highlight`; `tail` (default 5). |
+| `poll` | `question`; `options: [{ id, label }]`, 2 to 10; `multi`; `closes_at`; `closed`. |
+
+What a patch may name, by type: checklist `items`, `remove`; steps `stages`, `remove`,
+`progress`, `eta`; diff `text` or `files`; chart `kind`, `series`, `remove`, labels;
+table `columns`, `rows`, `append_rows`, `limit`; log `lines`, `text`, `append`,
+`highlight`, `tail`; poll `question`, `options`, `remove`, `multi`, `closes_at`,
+`closed`. `title` on all of them. `update_block({ ..., block })` replaces a block whole or
+adds one; `remove: true` takes it off. Only the agent that posted the card changes its
+blocks; who ticked and who voted is the server's, never yours to write.

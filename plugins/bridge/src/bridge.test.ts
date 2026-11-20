@@ -7,6 +7,7 @@ import {
 	describeAnswer,
 	describeAttachments,
 	describeReaction,
+	describeBlock,
 	describeRise,
 	newClientId,
 	quoting,
@@ -16,6 +17,7 @@ import {
 	type AnswerFrame,
 	type ChannelMessage,
 	type ReactionFrame,
+	type BlockFrame,
 	type Work
 } from './bridge';
 import { createChannelServer, main } from './channel';
@@ -960,6 +962,59 @@ describe('putting one reaction into a sentence', () => {
 		// An owner removing a thumbs-up has changed their mind, and an agent told
 		// nothing would carry on as though they had not.
 		expect(describeReaction(frame({ on: false }))).toContain('removed their reaction');
+	});
+});
+
+describe('putting a tick or a vote into a sentence', () => {
+	const frame = (overrides: Partial<BlockFrame> = {}): BlockFrame => ({
+		type: 'block',
+		action: 'check',
+		update_id: 'u1',
+		message_id: null,
+		request_id: null,
+		block_id: 'release',
+		block_type: 'checklist',
+		block_title: 'Release 1.0.9',
+		item_id: 'notes',
+		item_text: 'Write the release notes',
+		done: true,
+		project: 'web',
+		project_name: 'Web',
+		...overrides
+	});
+
+	it('says which line was ticked, on which checklist, and where', () => {
+		expect(describeBlock(frame())).toBe('Your owner ticked "Write the release notes" on your checklist "Release 1.0.9" (Web).');
+	});
+
+	it('says when a line was unticked, and by whom on a team', () => {
+		const said = describeBlock(frame({ done: false, by: { user_id: 'm2', name: 'Ann' } }));
+		expect(said).toBe('Ann unticked "Write the release notes" on your checklist "Release 1.0.9" (Web).');
+	});
+
+	it('arrives down the channel with the ids to act on', async () => {
+		const notify = vi.fn().mockResolvedValue(undefined);
+		const abort = new AbortController();
+		const fetcher = vi.fn().mockResolvedValue(new Response(sse(`event: block\ndata: ${JSON.stringify(frame())}\n\n`), { status: 200 }));
+		await runBridge({
+			baseUrl: 'https://dash.test',
+			token: 'a-token',
+			projects: ['*'],
+			fetch: fetcher as unknown as typeof globalThis.fetch,
+			notify,
+			sleep: async () => abort.abort(),
+			signal: abort.signal
+		});
+		expect(notify).toHaveBeenCalledTimes(1);
+		const [content, meta] = notify.mock.calls[0]!;
+		expect(content).toContain('ticked "Write the release notes"');
+		expect(meta).toMatchObject({ update_id: 'u1', block_id: 'release', action: 'check', item_id: 'notes' });
+	});
+
+	it('says what a vote chose, or that it was taken back', () => {
+		const vote = frame({ action: 'vote', block_type: 'poll', block_title: null, block_id: 'name', options: [{ id: 'a', label: 'Atlas' }] });
+		expect(describeBlock(vote)).toBe('Your owner voted for Atlas on your poll block name (Web).');
+		expect(describeBlock({ ...vote, options: [] })).toBe('Your owner took back their vote on your poll block name (Web).');
 	});
 });
 

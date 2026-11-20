@@ -162,6 +162,32 @@ export type ReactionFrame = {
 	body: string;
 };
 
+/**
+ * An `event: block` frame: a person ticked a line or voted on one of this
+ * agent's blocks (docs/BLOCKS.md on the server). The agent posted the
+ * checklist or the poll to hear exactly this, so it is told what was done,
+ * on which block and card, and by whom on a team.
+ */
+export type BlockFrame = {
+	type: 'block';
+	action: 'check' | 'vote';
+	update_id: string | null;
+	message_id: string | null;
+	request_id: string | null;
+	block_id: string;
+	block_type: string | null;
+	block_title: string | null;
+	/** A tick: which line, what it says, and whether it is now done. */
+	item_id?: string | null;
+	item_text?: string | null;
+	done?: boolean | null;
+	/** A vote: the options the person chose now; none means they took their vote back. */
+	options?: { id: string; label: string }[];
+	project: string | null;
+	project_name: string | null;
+	by?: { user_id: string; name: string };
+};
+
 export const CHANNEL_NAME = 'agent-dashboard';
 
 /**
@@ -213,6 +239,10 @@ export const INSTRUCTIONS = [
 	'  with request_id and state on the tag, so you can act on it without asking again;',
 	'  await_request re-reads the row when you want the typed value in full. A state of',
 	'  "timeout" or "cancelled" is not permission: it means nobody answered.',
+	'- A block event is your owner ticking a line of one of your checklists, or voting in one',
+	'  of your polls (blocks on post_update, post_message and request_input). It says which',
+	'  line or option and which card; get_blocks reads the whole block, and update_block',
+	'  changes it in place. Act on it if it unblocks you; nothing is owed back.',
 	'',
 	'The server keeps what you follow. Posting in a project or thread follows it, and an',
 	'@mention follows that thread for you. Call subscribe / unsubscribe when you take on or',
@@ -431,6 +461,27 @@ export function describeReaction(frame: ReactionFrame): string {
 	const verb = frame.on ? 'reacted' : 'removed their reaction';
 
 	return `Your owner ${verb} ${frame.emoji} on your message (${where}): ${about}`;
+}
+
+/**
+ * One tick or vote on the agent's block as a sentence.
+ *
+ * What was done first, in the owner's words for it ("ticked", "voted for"),
+ * then which block and where, so the agent can tell its checklists apart
+ * without looking anything up.
+ */
+export function describeBlock(frame: BlockFrame): string {
+	const who = frame.by?.name ?? 'Your owner';
+	const where = frame.project_name ?? frame.project ?? 'the dashboard';
+	const block = frame.block_title ? `"${frame.block_title}"` : `block ${frame.block_id}`;
+	if (frame.action === 'check') {
+		const line = (frame.item_text ?? frame.item_id ?? '').trim();
+		const verb = frame.done ? 'ticked' : 'unticked';
+		return `${who} ${verb} "${line}" on your checklist ${block} (${where}).`;
+	}
+	const chosen = (frame.options ?? []).map((o) => o.label);
+	if (chosen.length === 0) return `${who} took back their vote on your poll ${block} (${where}).`;
+	return `${who} voted for ${chosen.join(', ')} on your poll ${block} (${where}).`;
 }
 
 /**
@@ -731,6 +782,21 @@ export async function runBridge(options: BridgeOptions): Promise<void> {
 		await send(describeReaction(frame), attributes);
 	};
 
+	const announceBlock = async (send: NonNullable<BridgeOptions['notify']>, frame: BlockFrame) => {
+		const held = pendingCounts;
+		pendingCounts = null;
+
+		const attributes: Record<string, string> = { block_id: frame.block_id, action: frame.action };
+		if (frame.update_id) attributes.update_id = frame.update_id;
+		if (frame.message_id) attributes.message_id = frame.message_id;
+		if (frame.request_id) attributes.request_id = frame.request_id;
+		if (frame.project) attributes.project = frame.project;
+		if (frame.item_id) attributes.item_id = frame.item_id;
+		if (held) Object.assign(attributes, meta(held.work));
+
+		await send(describeBlock(frame), attributes);
+	};
+
 	/** Send the messages themselves, one notification each. */
 	const announce = async (send: NonNullable<BridgeOptions['notify']>, all: ChannelMessage[]) => {
 		const held = pendingCounts;
@@ -821,6 +887,14 @@ export async function runBridge(options: BridgeOptions): Promise<void> {
 				if (frame.event === 'reaction' && frame.data) {
 					try {
 						await announceReaction(notify, JSON.parse(frame.data) as ReactionFrame);
+					} catch {
+						// A malformed frame must not drop a working connection.
+					}
+					continue;
+				}
+				if (frame.event === 'block' && frame.data) {
+					try {
+						await announceBlock(notify, JSON.parse(frame.data) as BlockFrame);
 					} catch {
 						// A malformed frame must not drop a working connection.
 					}

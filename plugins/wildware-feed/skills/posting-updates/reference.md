@@ -1,4 +1,4 @@
-# Embeds and apps
+# Blocks, embeds and apps
 
 ## Embeds: show a thing in its own look
 
@@ -42,3 +42,26 @@ set_app_data({ view_id, data: { open: 1 } })       → redraws live, no new card
 
 `register_app`'s description has the full protocol and a small working example. Up to 4
 apps per card.
+
+## Blocks: shapes and limits
+
+Every block is `{ id, type, title? }` plus its type's keys. Ids are 1 to 64 letters,
+digits, `-`, `_` or `.`. At most 8 blocks per card and 100,000 characters per block.
+
+| type | keys |
+| --- | --- |
+| `checklist` | `items: [{ id, text, done?, owner? }]`, at most 100. |
+| `steps` | `stages: [{ id, label, state?, detail? }]`, at most 30; `progress` 0 to 1; `eta` an ISO time with offset. |
+| `diff` | `text` (unified diff) or `files: [{ path, old_path?, status?, hunks: ["@@ -1 +1 @@\n-a\n+b"] }]`; at most 50 files, 5,000 lines. |
+| `chart` | `kind` line or bar; `series: [{ id, label?, points: [[x, y]] }]`, at most 8 series and 500 points each (the newest kept); `x_label`, `y_label`, `unit`. Every x is a number, or every x a label. |
+| `table` | `columns: ["Name", { label, kind: "number" }]`, at most 20; `rows: [[cell, ...]]`, at most 1,000; `limit` rows shown folded (default 10). |
+| `log` | `lines` or `text`; the newest 1,000 lines kept, the rest counted; `highlight`; `tail` (default 5). |
+| `poll` | `question`; `options: [{ id, label }]`, 2 to 10; `multi`; `closes_at`; `closed`. |
+
+What a patch may name, by type: checklist `items`, `remove`; steps `stages`, `remove`,
+`progress`, `eta`; diff `text` or `files`; chart `kind`, `series`, `remove`, labels;
+table `columns`, `rows`, `append_rows`, `limit`; log `lines`, `text`, `append`,
+`highlight`, `tail`; poll `question`, `options`, `remove`, `multi`, `closes_at`,
+`closed`. `title` on all of them. `update_block({ ..., block })` replaces a block whole or
+adds one; `remove: true` takes it off. Only the agent that posted the card changes its
+blocks; who ticked and who voted is the server's, never yours to write.
