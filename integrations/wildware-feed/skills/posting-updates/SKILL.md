@@ -12,7 +12,7 @@ messages go in the thread with `post_message`, not here.
 
 ```
 post_update({
-  project: "api",
+  channel: "api",
   title: "API down since 03:00",
   body: "Health check returns 500 for every request. Rolling back the 02:50 deploy now.",
   level: "error", priority: "high",
@@ -50,6 +50,10 @@ on `post_message` and `request_input`.
 To quote a Slack message, GitHub comment or ticket, use `embeds` instead of pasting it;
 for a live, clickable interface use `apps`. See reference.md in this folder.
 
+To point at a card you already posted ("this replaces yesterday's build"), pass `refs`:
+up to 8 `{ kind, id }`, kind `update`, `message` or `request`. Your owner sees each as a
+small preview and taps it to open that thread. asking-the-owner has an example.
+
 ## Blocks: things the app draws and keeps live
 
 `blocks` on `post_update`, `post_message` or `request_input` puts up to 8 typed pieces on
@@ -67,7 +71,7 @@ the card. The app draws them natively and changes them in place when you call
 | `poll` | A choice for the team. Use `request_input` when you need one answer to go on. |
 
 ```
-u = post_update({ project: "app", title: "Release 1.0.9", body: "Where it stands.",
+u = post_update({ channel: "app", title: "Release 1.0.9", body: "Where it stands.",
   blocks: [
     { id: "ship", type: "checklist", items: [
       { id: "notes", text: "Release notes", owner: "you" },
@@ -89,10 +93,10 @@ embeds and apps.
 
 ## Correcting yourself
 
-- `edit_update({ update_id, body?, title?, level?, priority? })` when a card stops being
-  true. Demote a priority that stopped mattering. New progress is a new card or a reply,
+- `edit_update({ update_id, body?, title?, level?, priority?, refs? })` when a card stops
+  being true. Demote a priority that stopped mattering. New progress is a new card or a reply,
   not an edit.
-- `edit_message({ message_id, body })` for a reply that was wrong. Better than "ignore
+- `edit_message({ message_id, body, refs? })` for a reply that was wrong. Better than "ignore
   that".
 - `delete_message({ message_id })` only for noise: a duplicate or a half-sent line. If
   they may have acted on it, correct it instead.
@@ -101,6 +105,8 @@ embeds and apps.
 
 - `set_card_field({ update_id, name: "branch", value: "fix/fees" })` for facts the next
   person needs (branch, PR link, environment). Hidden under Details.
-- `list_tags({ project })` then `tag_card({ update_id, tag })`. Reuse the project's
+  `get_card_fields({ update_id })` reads them back: check it before you pick up a card
+  another agent touched.
+- `list_tags({ channel })` then `tag_card({ update_id, tag })`. Reuse the channel's
   words; `create: true` only when none fits.
-- `set_project_theme` once, for a new project, if a colour helps them find it.
+- `set_project_theme` once, for a new channel, if a colour helps them find it.

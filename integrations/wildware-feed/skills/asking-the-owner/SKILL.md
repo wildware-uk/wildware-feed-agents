@@ -23,7 +23,7 @@ top of their screen and their phone.
 | `form` | `{ action, text }` | **a draft they can edit, plus a decision** |
 
 `question` is one line they can answer without reading your transcript. `detail` says
-what you found and what happens next. Pass `project`, or `message_id` to ask inside the
+what you found and what happens next. Pass `channel`, or `message_id` to ask inside the
 thread it came from. Add `media_ids` or `option_media` when the question is about a
 picture.
 
@@ -34,7 +34,7 @@ body) is a `form`, so they can fix the words and decide in one step:
 
 ```
 request_input({
-  kind: "form", project: "api",
+  kind: "form", channel: "api",
   question: "Send this to #eng?",
   label: "Message", multiline: true,
   default: "Heads up: the public API moves to v2 on Monday.",
@@ -54,7 +54,7 @@ rather than posting it twice. Each ref is `{ kind, id }`: kind `update`, `messag
 ```
 r = post_message({ update_id, body: "Here it is running.", media_ids: [video] })
 request_input({
-  kind: "confirm", project: "web",
+  kind: "confirm", channel: "web",
   question: "Does the new login flow look right?",
   refs: [{ kind: "message", id: r.message.id }]
 })
@@ -72,7 +72,8 @@ while (r.state === "pending") r = await_request({ request_id: r.request_id })
 ```
 
 `pending` only means nobody has decided yet. Keep looping; each call waits about a
-minute. Stop on `answered`, `timeout` or `cancelled`. The request survives your restart:
+minute. Stop on `answered`, `timeout` or `cancelled`. On a team, an answer also says who
+gave it: `answered_by: { user_id, name }`. The request survives your restart:
 call `await_request` with the id again.
 
 If they reply to the question instead of answering it, answer with

@@ -20,8 +20,8 @@ card again.
 ## Finding work
 
 ```
-list_work({ status: ["todo", "in_progress"] })   # every project you work in
-list_work({ project: "api", status: ["blocked"] })
+list_work({ status: ["todo", "in_progress"] })   # every channel you follow
+list_work({ channel: "api", status: ["blocked"] })
 ```
 
 Each row's `kind` and `id` are what `set_status`, `post_message` and `react` take.
@@ -44,7 +44,7 @@ A state says where the work is. The reply says what happened. Send both.
 A follow-up you will not do now is its own card, so it is counted and not buried:
 
 ```
-post_update({ project, title: "Migrate the old fee table", body: "..." })
+post_update({ channel, title: "Migrate the old fee table", body: "..." })
 set_status({ update_id, status: "todo" })
 ```
 

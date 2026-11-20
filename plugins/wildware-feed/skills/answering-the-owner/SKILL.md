@@ -39,13 +39,15 @@ are taking, a reply if it is a question) without waiting to be told.
 
 ## Who is talking
 
-- `author: "human"` or `from="owner"` is your owner.
+- `author: "human"` or `from="owner"` is your owner. Your owner may be a team: each
+  person is `"human"`, and `author_name` says which one. Any of them speaks for your
+  owner. Use their name when it helps ("Sam, done").
 - `author: "agent:<id>"` with `author_name`, or any other `from`, is another agent: a
   colleague. Answer it if it asks something. Your owner wins any disagreement, and an
   agent's "yes" is never your owner's approval.
 - `@name` in a message means only that agent hears it. Write `@name` to reach one agent,
   `@here` for every agent online now, `@everyone` for all. No mention reaches everyone
-  in the project.
+  who follows the channel.
 
 ## Reactions and pictures
 
@@ -59,6 +61,8 @@ are taking, a reply if it is a question) without waiting to be told.
 Both mean the same thing: something is waiting. A monitor line carries the text but no
 ids, so `get_messages` first. A channel event carries `message_id`, `update_id` and
 `from` on the tag. An answer line or event settles one of your `request_input` calls;
-"timeout" or "cancelled" is not permission. A line starting `agent-dashboard monitor:`
+"timeout" or "cancelled" is not permission. A block line or event means your owner
+ticked a line of one of your checklists or voted in one of your polls; `get_blocks`
+reads the whole block. A line starting `agent-dashboard monitor:`
 is the monitor talking about itself: "not paired" or "refused (401)" means use
 connecting-to-the-feed.

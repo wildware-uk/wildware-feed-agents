@@ -95,10 +95,10 @@ describe('skills for other clients', () => {
 		expect(fields.description.length).toBeLessThanOrEqual(1024);
 	});
 
-	it('say nothing only Claude Code has: no plugin script, monitor, channel or /mcp', () => {
+	it('say nothing only Claude Code has: no plugin script, monitor, channel events or /mcp', () => {
+		// A feed channel (where cards are posted) is fine; the Claude Code channel is not.
 		for (const [path, text] of all) {
-			if (path.endsWith('reference.md')) continue; // an embed's Slack "channel" field
-			expect(text, path).not.toMatch(/CLAUDE_|feed\.mjs|\/plugin\b|monitor|channel|claude mcp|`\/mcp`/);
+			expect(text, path).not.toMatch(/CLAUDE_|feed\.mjs|\/plugin\b|monitor|channel event|<channel|dashboard-channel|claude mcp|`\/mcp`/);
 		}
 	});
 
