@@ -5,7 +5,9 @@
  * a committed script that drifted from its source.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { serverTools } from './server-files';
@@ -124,4 +126,43 @@ describe('the committed scripts', () => {
 	it('are what the source builds to', () => {
 		expect(() => execFileSync('node', ['build.mjs', '--check'], { cwd: resolve(ROOT, 'plugins/bridge'), stdio: 'pipe' })).not.toThrow();
 	}, 60_000);
+});
+
+/**
+ * The env-file line in sharing-secrets is the only form a client without the
+ * plugin has. A value with a quote or a line break must add nothing to the file:
+ * written in, it would end the quotes and add lines of its own.
+ */
+describe('the documented env-file line', () => {
+	const line = skills['sharing-secrets']!.split('\n').find((l) => l.includes('.env.local') && l.includes('curl'))!;
+	const VALUES = {
+		plain: 'sk-test NOT $REAL #1',
+		quote: "dummy-value'\nNODE_OPTIONS='--require=./x.js",
+		command: "x'; echo RAN; : '",
+		newline: 'a\nb',
+		cr: 'a\rb'
+	};
+
+	for (const shell of ['sh', 'bash']) {
+		it(`appends one literal line for a plain value, and nothing otherwise (${shell})`, () => {
+			for (const [kind, value] of Object.entries(VALUES)) {
+				const dir = mkdtempSync(join(tmpdir(), 'feed-envline-'));
+				writeFileSync(join(dir, 'value'), value);
+				// curl stands in as a function that prints the dummy value, as curl would.
+				const script = `curl() { cat value; }\n${line.replace(/#.*$/, '')}`;
+				const out = execFileSync(shell, ['-c', script], { cwd: dir, encoding: 'utf8' });
+				let file = '';
+				try {
+					file = readFileSync(join(dir, '.env.local'), 'utf8');
+				} catch {}
+				if (kind === 'plain') {
+					expect(file).toBe(`NAME='${value}'\n`);
+				} else {
+					expect(file, kind).toBe('');
+					expect(out).toContain('refused');
+					expect(out).not.toContain('RAN');
+				}
+			}
+		});
+	}
 });

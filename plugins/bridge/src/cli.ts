@@ -16,11 +16,12 @@
  */
 import { parseArgs } from 'node:util';
 import { readFileSync } from 'node:fs';
-import { Store, writeSecret } from './store';
+import { sameOrigin, Store, writeSecret, type Resolved } from './store';
 import { startPairing, waitForPairing } from './pair';
 import { channelIsLive, CLAIM_EVERY_MS } from './claim';
 import { runMonitor } from './monitor';
-import { getSecret, putSecret } from './secret';
+import { getSecret, putSecret, SecretError } from './secret';
+import { watch } from './follow';
 
 /**
  * What the hook saves for the monitor. No token: that is in the store.
@@ -105,6 +106,46 @@ export function connection(store: Store, env: NodeJS.ProcessEnv): { url: string;
 	return { url, token: token.token, monitor };
 }
 
+/** True when two connections reach the same dashboard with the same token. */
+export function sameConnection(a: { url: string; token: string }, b: { url: string; token: string }): boolean {
+	return a.url === b.url && a.token === b.token;
+}
+
+/**
+ * Where `secret get` and `secret put` send this project's token, and which token.
+ *
+ * `--url` may name another dashboard, but only a token paired with that one goes
+ * there: the `AGENT_DASHBOARD_TOKEN` and `agent_token` tokens belong to the
+ * dashboard this plugin is set up for, and are never sent anywhere else.
+ */
+export function secretTarget(
+	store: Store,
+	env: NodeJS.ProcessEnv,
+	flag: string | undefined
+): { url: string; token: Resolved } | { refused: string } {
+	const configured = [env.AGENT_DASHBOARD_URL?.trim(), readSettings(store)?.url, settingsFrom(env).url].filter(
+		(u): u is string => !!u
+	);
+	const url = flag?.trim() || configured[0];
+	const token = url ? store.resolve(env, url) : null;
+	if (!url || !token) {
+		return { refused: 'This project is not connected to the dashboard yet: pair it first (wildware-feed:connecting-to-the-feed).' };
+	}
+	if (token.source !== 'paired' && !configured.some((u) => sameOrigin(u, url))) {
+		return { refused: `--url names a dashboard this plugin is not set up for, and only a token paired with it may go there: pair this project with it first.` };
+	}
+	return { url, token };
+}
+
+/** What a failed secret command prints: its own words, or a fixed sentence that holds nothing. */
+export function secretFailure(e: unknown): string {
+	if (e instanceof SecretError) return e.message;
+	// A file error names only the path it was given (--to, --from, --env-file).
+	const file = e as NodeJS.ErrnoException;
+	if (e instanceof Error && typeof file.syscall === 'string' && typeof file.code === 'string') return e.message;
+	return 'it failed, and nothing was saved: run it again for a fresh link';
+}
+
 /** The env the claim code reads: the data folder and this project's key. */
 export function claimEnv(store: Store, env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 	return { ...env, CLAUDE_PLUGIN_DATA: store.data, WILDWARE_FEED_PROJECT_KEY: store.key };
@@ -152,8 +193,24 @@ async function monitor(store: Store, env: NodeJS.ProcessEnv): Promise<void> {
 			continue;
 		}
 		if (found) {
-			await runMonitor({ baseUrl: found.url, token: found.token });
-			return;
+			// Read the store again every few seconds and before each line: once this
+			// project is unpaired or paired elsewhere, the old dashboard is dropped and
+			// the loop goes back to waiting for the current one (`./follow.ts`).
+			const live = watch(found, () => connection(store, env), sameConnection, MONITOR_WAIT_MS);
+			try {
+				await runMonitor({
+					baseUrl: found.url,
+					token: found.token,
+					signal: live.signal,
+					write: (line) => {
+						if (live.still()) process.stdout.write(`${line}\n`);
+					}
+				});
+			} finally {
+				live.stop();
+			}
+			process.stderr.write("agent-dashboard monitor: this project's pairing changed; waiting for the current one\n");
+			continue;
 		}
 		if (!saidUnconfigured && Date.now() - started >= SAY_AFTER_MS) {
 			saidUnconfigured = true;
@@ -236,12 +293,12 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
 				say(usage);
 				return 2;
 			}
-			const url = values.url?.trim() || readSettings(store)?.url || settingsFrom(env).url;
-			const token = url ? store.resolve(env, url) : null;
-			if (!url || !token) {
-				say('This project is not connected to the dashboard yet: pair it first (wildware-feed:connecting-to-the-feed).');
+			const target = secretTarget(store, env, values.url);
+			if ('refused' in target) {
+				say(target.refused);
 				return 2;
 			}
+			const { url, token } = target;
 			try {
 				if (sub === 'get') {
 					say(await getSecret({ url, token: token.token, name, to: values.to, envFile: values['env-file'], as: values.as }));
@@ -254,8 +311,8 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
 				}
 				return 0;
 			} catch (e) {
-				// The dashboard's words, never a value or a link.
-				say(`secret ${sub} ${name}: ${e instanceof Error ? e.message : String(e)}`);
+				// The dashboard's words, never a value, a link or a token.
+				say(`secret ${sub} ${name}: ${secretFailure(e)}`);
 				return 1;
 			}
 		}

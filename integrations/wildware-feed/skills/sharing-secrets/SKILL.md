@@ -32,13 +32,15 @@ To check it worked, look at the size only: `test -s .env.local && echo saved`.
 
 ```
 (umask 077; curl -fsS '<url>' -o secret.txt)                                   # a file of its own
-v="$(curl -fsS '<url>')" && (umask 077; printf "NAME='%s'\n" "$v" >> .env.local)  # a line in an env file
+v="$(curl -fsS '<url>')" && case "$v" in *\'*|*[[:cntrl:]]*) echo 'refused: it holds a quote or a line break; give it a file of its own';; *) (umask 077; printf "NAME='%s'\n" "$v" >> .env.local);; esac; unset v  # a line in an env file
 NAME="$(curl -fsS '<url>')" some-command                                        # one command's environment
 ```
 
-Check the file is git-ignored before you write it, and that it has no `NAME=` line already.
-A value with a quote or a line break does not belong in an env file: give it a file of its
-own. If `curl` fails, ask for a fresh link; a used link never works again.
+Check the file is git-ignored before you write it, that it is a real file and not a link,
+and that it has no `NAME=` line already. `NAME` must be a variable name: letters, digits and
+`_`, not starting with a digit. A value with a quote or a line break does not belong in an
+env file: the env-file line refuses it, so give it a file of its own. If `curl` fails, ask
+for a fresh link; a used link never works again.
 
 Never run these under `set -x` or `bash -x`: tracing prints the expanded value.
 

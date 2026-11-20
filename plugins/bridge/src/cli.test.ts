@@ -2,7 +2,8 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { claimEnv, connection, headers, readSettings, sessionStart, settingsFrom } from './cli';
+import { claimEnv, connection, headers, readSettings, sameConnection, secretFailure, secretTarget, sessionStart, settingsFrom } from './cli';
+import { SecretError } from './secret';
 import { Store } from './store';
 
 const URL_ = 'https://dashboard.example.com';
@@ -89,5 +90,43 @@ describe('what the monitor connects with', () => {
 	it('keys the channel claim to the project', () => {
 		const s = store();
 		expect(claimEnv(s, {})).toMatchObject({ CLAUDE_PLUGIN_DATA: s.data, WILDWARE_FEED_PROJECT_KEY: s.key });
+	});
+});
+
+describe('where a secret command sends the token', () => {
+	const OTHER = 'https://other.example.test';
+
+	it('sends the environment or option token only to the dashboard this plugin is set up for', () => {
+		const s = store();
+		sessionStart(s, { CLAUDE_PLUGIN_OPTION_DASHBOARD_URL: URL_, CLAUDE_PLUGIN_OPTION_AGENT_TOKEN: 'option-token' });
+		expect(secretTarget(s, {}, undefined)).toMatchObject({ url: URL_, token: { token: 'option-token' } });
+		expect(secretTarget(s, {}, `${URL_}/mcp`)).toMatchObject({ token: { token: 'option-token' } });
+		expect(secretTarget(s, {}, OTHER)).toHaveProperty('refused');
+		expect(secretTarget(s, { AGENT_DASHBOARD_TOKEN: 'env-token' }, OTHER)).toHaveProperty('refused');
+		expect(JSON.stringify(secretTarget(s, {}, OTHER))).not.toContain('option-token');
+	});
+
+	it('lets a paired token go to the dashboard it was paired with, and nowhere else', () => {
+		const s = store();
+		pair(s, OTHER);
+		expect(secretTarget(s, {}, OTHER)).toMatchObject({ url: OTHER, token: { source: 'paired' } });
+		expect(secretTarget(s, {}, 'https://third.example.test')).toHaveProperty('refused');
+	});
+
+	it('says what it could not do, and never what fetch quoted', () => {
+		expect(secretFailure(new SecretError('the dashboard said 500'))).toBe('the dashboard said 500');
+		const quoted = secretFailure(new TypeError('Failed to parse URL from /api/agent/secret/LINK-1'));
+		expect(quoted).not.toContain('LINK-1');
+		const file = Object.assign(new Error("ENOENT: no such file or directory, open 'missing.txt'"), { code: 'ENOENT', syscall: 'open' });
+		expect(secretFailure(file)).toContain('missing.txt');
+	});
+});
+
+describe('what a running monitor compares', () => {
+	it('is a new connection when the token or the dashboard changes', () => {
+		const a = { url: URL_, token: 'A', monitor: 'auto' as const };
+		expect(sameConnection(a, { ...a })).toBe(true);
+		expect(sameConnection(a, { ...a, token: 'B' })).toBe(false);
+		expect(sameConnection(a, { ...a, url: 'https://other.example.test' })).toBe(false);
 	});
 });

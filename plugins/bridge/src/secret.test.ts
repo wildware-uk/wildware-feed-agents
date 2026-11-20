@@ -2,7 +2,7 @@ import { lstatSync, mkdtempSync, readFileSync, statSync, symlinkSync, writeFileS
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { getSecret, putSecret, withEnvLine } from './secret';
+import { getSecret, linkFrom, putSecret, SecretError, withEnvLine } from './secret';
 
 const URL_ = 'https://dashboard.example.com';
 const VALUE = 'sk-test-NOT-REAL-plugin-1234';
@@ -12,7 +12,7 @@ const dir = () => mkdtempSync(join(tmpdir(), 'feed-secret-'));
 type Call = { url: string; init?: RequestInit };
 
 /** A dashboard that hands out one link and serves or takes one value. */
-function dashboard(opts: { refuse?: string; served?: string } = {}) {
+function dashboard(opts: { refuse?: string; served?: string; link?: string } = {}) {
 	const calls: Call[] = [];
 	let stored: Buffer | null = null;
 	const fetch = (async (url: string, init?: RequestInit) => {
@@ -22,7 +22,8 @@ function dashboard(opts: { refuse?: string; served?: string } = {}) {
 			if (opts.refuse) {
 				return new Response(JSON.stringify({ result: { isError: true, structuredContent: { error: 'not_found', message: opts.refuse } } }));
 			}
-			const data = call.name === 'secret_url' ? { name: call.arguments.name, url: LINK } : { name: call.arguments.name, upload_url: LINK };
+			const link = opts.link ?? LINK;
+			const data = call.name === 'secret_url' ? { name: call.arguments.name, url: link } : { name: call.arguments.name, upload_url: link };
 			return new Response(JSON.stringify({ result: { structuredContent: data } }));
 		}
 		if (url === LINK && (init?.method ?? 'GET') === 'GET') return new Response(opts.served ?? VALUE);
@@ -116,5 +117,100 @@ describe('files', () => {
 		const binary = (async (url: string, init?: RequestInit) =>
 			url === LINK ? new Response(new Uint8Array([0xff, 0xfe])) : fetch(url, init)) as typeof globalThis.fetch;
 		await expect(getSecret({ url: URL_, token: 't', name: 'K', envFile: join(dir(), '.env') }, { fetch: binary })).rejects.toThrow('not text');
+	});
+});
+
+describe('an env file that is a link', () => {
+	it('is refused before the link is asked for, and the file it points at is never read', async () => {
+		const d = dir();
+		const outside = join(d, 'private.txt');
+		writeFileSync(outside, 'PRIVATE-LINE');
+		const env = join(d, '.env.local');
+		symlinkSync(outside, env);
+		const dash = dashboard();
+
+		await expect(getSecret({ url: URL_, token: 't', name: 'K', envFile: env }, dash)).rejects.toThrow('is a link');
+		expect(dash.calls).toHaveLength(0);
+		expect(lstatSync(env).isSymbolicLink()).toBe(true);
+		expect(readFileSync(outside, 'utf8')).toBe('PRIVATE-LINE');
+	});
+
+	it('is refused when it points nowhere, too', async () => {
+		const d = dir();
+		const env = join(d, '.env.local');
+		symlinkSync(join(d, 'missing'), env);
+		await expect(getSecret({ url: URL_, token: 't', name: 'K', envFile: env }, dashboard())).rejects.toThrow('is a link');
+	});
+});
+
+/** The link and the token stay out of every message, failures included. */
+describe('a failed secret command', () => {
+	const ID = 'LINKID-1111111111111111111111111111';
+	const kept = (e: unknown) => {
+		expect(e).toBeInstanceOf(SecretError);
+		const message = (e as Error).message;
+		expect(message).not.toContain(ID);
+		expect(message).not.toContain('proxypass');
+		expect(message).not.toContain('secret-token');
+		return message;
+	};
+	const failing = async (run: Promise<unknown>) => {
+		try {
+			await run;
+		} catch (e) {
+			return kept(e);
+		}
+		throw new Error('expected a refusal');
+	};
+
+	it('never quotes a link fetch could not use', async () => {
+		for (const link of [`https://proxyuser:proxypass@dashboard.example.com/api/agent/secret/${ID}`, `https://dashboard.example.com:99999/api/agent/secret/${ID}`, `http://[::1/${ID}`]) {
+			await failing(getSecret({ url: URL_, token: 'secret-token', name: 'K', to: join(dir(), 'x') }, dashboard({ link })));
+			const from = join(dir(), 'f');
+			writeFileSync(from, 'v');
+			await failing(putSecret({ url: URL_, token: 'secret-token', name: 'K', from }, dashboard({ link })));
+		}
+	});
+
+	it('never quotes a token with a line break in it, and sends nothing', async () => {
+		const d = dashboard();
+		const message = await failing(getSecret({ url: URL_, token: 'secret-token\nBBBB', name: 'K', to: join(dir(), 'x') }, d));
+		expect(message).toContain('line break');
+		expect(d.calls).toHaveLength(0);
+	});
+
+	it('turns whatever fetch throws into a fixed sentence', async () => {
+		const throwing = (async (url: string) => {
+			throw new TypeError(`Failed to parse URL from ${url} secret-token`);
+		}) as unknown as typeof globalThis.fetch;
+		await failing(getSecret({ url: URL_, token: 'secret-token', name: 'K', to: join(dir(), 'x') }, { fetch: throwing }));
+	});
+});
+
+describe('where a secret link may point', () => {
+	it('resolves a path against the dashboard, and keeps a link on it', () => {
+		expect(linkFrom(`${URL_}/mcp`, '/api/agent/secret/x')).toBe(`${URL_}/api/agent/secret/x`);
+		expect(linkFrom(URL_, LINK)).toBe(LINK);
+	});
+
+	it('refuses a link on any other address, and fetches nothing from it', async () => {
+		const elsewhere = `https://other.example.test/api/agent/secret/${'y'.repeat(20)}`;
+		expect(() => linkFrom(URL_, elsewhere)).toThrow('another address');
+		expect(() => linkFrom(URL_, 'http://dashboard.example.com/x')).toThrow('another address');
+		const d = dashboard({ link: elsewhere });
+		await expect(getSecret({ url: URL_, token: 't', name: 'K', to: join(dir(), 'x') }, d)).rejects.toThrow('another address');
+		expect(d.calls.map((c) => c.url)).toEqual([`${URL_}/mcp`]);
+
+		const from = join(dir(), 'f');
+		writeFileSync(from, 'v');
+		const p = dashboard({ link: elsewhere });
+		await expect(putSecret({ url: URL_, token: 't', name: 'K', from }, p)).rejects.toThrow('another address');
+		expect(p.stored()).toBeNull();
+	});
+
+	it('does not follow a redirect', async () => {
+		const d = dashboard();
+		await getSecret({ url: URL_, token: 't', name: 'K', to: join(dir(), 'x') }, d);
+		expect(d.calls[1]?.init?.redirect).toBe('error');
 	});
 });

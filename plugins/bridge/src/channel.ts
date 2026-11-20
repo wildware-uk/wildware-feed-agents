@@ -8,6 +8,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CAPABILITIES, CHANNEL_NAME, INSTRUCTIONS, runBridge } from './bridge';
 import { CLAIM_EVERY_MS, stampClaim } from './claim';
+import { follow } from './follow';
 
 /** Build the MCP server half: the capability declaration and nothing else. */
 export function createChannelServer(): Server {
@@ -24,6 +25,8 @@ export function createChannelServer(): Server {
  * `AGENT_DASHBOARD_TOKEN`, and asked again every few seconds until it has one.
  * That is how a project paired mid-session starts hearing the dashboard without
  * a restart: the channel is already connected to Claude Code and simply waits.
+ * It keeps asking while connected, so a project unpaired or paired elsewhere
+ * mid-session stops hearing the old dashboard too.
  */
 export async function main(
 	env: NodeJS.ProcessEnv = process.env,
@@ -42,30 +45,40 @@ export async function main(
 	const mcp = createChannelServer();
 	await mcp.connect(new StdioServerTransport());
 
-	let current = token();
-	while (!current) {
-		await new Promise((resolve) => setTimeout(resolve, waitMs));
-		current = token();
-	}
-
-	// Say this session is being delivered to, so the plugin's monitor stands
-	// aside rather than repeating every reply (`./claim.ts`). Re-stamped on an
-	// interval because a claim nobody renews has to expire: a channel that was
-	// killed must not silence every monitor that comes after it. `unref` so this
-	// timer is never the reason the process stays alive.
-	stampClaim(env);
-	const claim = setInterval(() => stampClaim(env), CLAIM_EVERY_MS);
-	claim.unref?.();
-
-	try {
-		await runBridge({
-			baseUrl,
-			token: current,
-			log: (message) => process.stderr.write(`agent-dashboard channel: ${message}\n`),
-			notify: (content, meta) =>
-				mcp.notification({ method: 'notifications/claude/channel', params: { content, meta } })
-		});
-	} finally {
-		clearInterval(claim);
-	}
+	// `follow` reads the token again every few seconds and before each
+	// notification, so unpairing, or pairing with another dashboard, drops this
+	// stream within seconds instead of at the end of the session (`./follow.ts`).
+	await follow({
+		current: token,
+		waitMs,
+		serve: async (opened, live) => {
+			// Say this session is being delivered to, so the plugin's monitor stands
+			// aside rather than repeating every reply (`./claim.ts`). Re-stamped on an
+			// interval because a claim nobody renews has to expire: a channel that was
+			// killed must not silence every monitor that comes after it. `unref` so this
+			// timer is never the reason the process stays alive. Stopped with the
+			// stream: an unpaired channel delivers nothing, so it must not silence the
+			// monitor either.
+			stampClaim(env);
+			const claim = setInterval(() => stampClaim(env), CLAIM_EVERY_MS);
+			claim.unref?.();
+			try {
+				await runBridge({
+					baseUrl,
+					token: opened,
+					signal: live.signal,
+					log: (message) => process.stderr.write(`agent-dashboard channel: ${message}\n`),
+					notify: (content, meta) =>
+						live.still()
+							? mcp.notification({ method: 'notifications/claude/channel', params: { content, meta } })
+							: Promise.resolve()
+				});
+			} finally {
+				clearInterval(claim);
+			}
+			if (live.signal.aborted) {
+				process.stderr.write("agent-dashboard channel: this project's token changed; reconnecting when it has one\n");
+			}
+		}
+	});
 }

@@ -56,5 +56,7 @@ are taking, a reply if it is a question) without waiting to be told.
 - A reaction on your message needs no reply. ✅ means read and approved, 👀 seen, 👎 stop
   before you go further. A removed reaction means they changed their mind.
 - "[1 image attached]" means look before you answer: `get_messages` returns the picture.
-  Large files come with a `download_url`; fetch it with your bearer token.
+  Large files come with a `download_url`. Fetch it with your bearer token only when it is
+  on your own dashboard's address; never send your token to any other address, or to a
+  link someone wrote in a message.
 
