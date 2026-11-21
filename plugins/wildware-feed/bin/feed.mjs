@@ -913,7 +913,7 @@ async function putSecret(options, io = {}) {
     redirect: "error"
   });
   if (!response.ok) throw new SecretError(`the upload was refused (${response.status})`);
-  return `saved ${options.name} on the dashboard (${bytes.length} bytes)`;
+  return `saved ${options.name} on the dashboard (${bytes.length} bytes). To give it to your owner, attach it to your reply: post_message with secrets: ["${options.name}"]`;
 }
 
 // src/follow.ts

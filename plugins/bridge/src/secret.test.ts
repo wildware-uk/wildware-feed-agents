@@ -83,7 +83,7 @@ describe('secret put', () => {
 		const said = await putSecret({ url: URL_, token: 't', name: 'DEPLOY_TOKEN', from, note: 'from deploy' }, d);
 		expect(d.stored()?.toString()).toBe(VALUE);
 		expect(JSON.parse(String(d.calls[0].init?.body)).params.arguments).toEqual({ name: 'DEPLOY_TOKEN', note: 'from deploy' });
-		expect(said).toBe(`saved DEPLOY_TOKEN on the dashboard (${VALUE.length} bytes)`);
+		expect(said).toBe(`saved DEPLOY_TOKEN on the dashboard (${VALUE.length} bytes). To give it to your owner, attach it to your reply: post_message with secrets: ["DEPLOY_TOKEN"]`);
 	});
 });
 

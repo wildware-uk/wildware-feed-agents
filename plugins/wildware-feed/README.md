@@ -69,8 +69,9 @@ reply where asked. It only appears when `dashboard_url` is set.
 ## Secrets
 
 `feed.mjs secret get NAME --to <file>` (or `--env-file .env.local`) fetches a secret the owner
-shared and writes it 0600, printing only `saved …`. `secret put NAME --from <file>` hands one to
-the owner. The value never reaches the agent's transcript. Needs a dashboard with `SECRETS_KEY`.
+shared and writes it 0600, printing only `saved …`. `secret put NAME --from <file>` stores one for
+the owner; the agent then attaches it to its reply (`post_message` with `secrets: ["NAME"]`) and
+the owner reveals or copies it right there in the thread. The value never reaches the agent's transcript. Needs a dashboard with `SECRETS_KEY`.
 
 ## Hearing replies
 
