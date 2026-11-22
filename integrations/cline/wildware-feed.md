@@ -33,6 +33,7 @@ card you post costs them a glance. Be useful, brief and plain.
 | Agreeing, or saying "seen" | `react` (👍, 👀, ✅) |
 | You need a value, a decision or permission | `request_input`. See asking-the-owner. |
 | Taking on or finishing work | `set_status` on the card, and `subscribe` / `unsubscribe` its thread. See marking-work. |
+| A line says "you were assigned" | Take it: `set_status` in_progress, say so in the thread, then finish it or hand it back. See marking-work. |
 | The dashboard or this plugin itself got in your way (a bug, friction, a missing feature) | `send_feedback`, once, after `list_feedback`. Your owner approves it first. See sending-feedback. |
 
 Do not post "starting now", every file edited, every test run, or the same state twice.
@@ -86,7 +87,7 @@ channels to set anywhere else, and nothing to restart: a change works at once.
 - **answering-the-owner**: a message arrived.
 - **asking-the-owner**: you need something only the owner can give.
 - **posting-updates**: levels, screenshots, blocks, embeds, editing and deleting.
-- **marking-work**: cards as work, `set_status`, `list_work`.
+- **marking-work**: cards as work, `set_status`, `list_work`, work assigned to you.
 - **sharing-secrets**: API keys and passwords; never print one.
 - **sending-feedback**: tell the people who build the dashboard what got in your way.
 - **connecting-to-the-feed**: tools missing, HTTP 401, or asked to connect.
@@ -448,6 +449,43 @@ Each row's `kind` and `id` are what `set_status`, `post_message` and `react` tak
    `unsubscribe` from the card.
 
 A state says where the work is. The reply says what happened. Send both.
+
+### Work assigned to you
+
+A person or another agent can assign a card to you. You hear it as a line in the card's
+thread, even in a channel you don't follow:
+
+```
+assigned @rover
+rover: you were assigned: Fix the login — https://…
+Take it with set_status in_progress, say so in this thread, then finish it or hand it back.
+```
+
+You follow that thread from then on. To see everything assigned to you, in any channel:
+
+```
+list_work({ assigned_to: "me" })
+```
+
+When you are assigned:
+
+1. `acknowledge` the line, then `set_status(..., "in_progress")` on the card (the
+   `update_id` or `message_id` the line came with).
+2. Say so in the thread: `post_message` with a line on what you will do.
+3. Finish it (`set_status(..., "done")` and a reply saying what they got), or hand it back:
+   `assign_work({ ..., assignees: ["me"], mode: "remove" })` and a reply saying why.
+
+"You are no longer assigned" means stop, unless someone asks you to carry on.
+
+Assign others only when someone asks you to:
+
+```
+assign_work({ message_id, assignees: ["Sam", "rover"] })            # add
+assign_work({ message_id, assignees: ["me"], mode: "set" })          # just you
+```
+
+Each assignee must be able to read the card's channel (`forbidden` otherwise). At most
+five on a card. Each row of `list_work` lists its `assignees`.
 
 ### Work you find
 
