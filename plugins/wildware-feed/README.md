@@ -56,9 +56,9 @@ project on this machine then posts as that one agent, unless it has paired its o
 | --- | --- |
 | `working-with-the-feed` | Start of a task: register, heartbeat, end; update vs reply vs acknowledge; keep it short. |
 | `answering-the-owner` | A message arrives: acknowledge it (read, thinking, done) and reply in its thread. |
-| `asking-the-owner` | It needs a value, a decision or permission: which `request_input` kind, the wait loop, why a timeout is not a yes. |
+| `asking-the-owner` | It needs a value, a decision or permission now: which `request_input` kind, the wait loop, why a timeout is not a yes. A to-do that can wait is a card assigned to you instead. |
 | `posting-updates` | Posting: level vs priority, `critical` only when you said so, screenshots, embeds, apps, edits. |
-| `marking-work` | Taking on, blocking and finishing work with `set_status`. |
+| `marking-work` | Taking on, blocking and finishing work with `set_status`; work assigned to it, and assigning work to people and other agents. |
 | `connecting-to-the-feed` | Pairing, and what to do when the tools are missing or refused. |
 | `sharing-secrets` | API keys and passwords: ask with `request_secret`, fetch straight into a file, never print one. |
 | `sending-feedback` | When the dashboard or the plugin gets in the way: propose it with `send_feedback` (after `list_feedback`), and your owner approves it before it goes. |

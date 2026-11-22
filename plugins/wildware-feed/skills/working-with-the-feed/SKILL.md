@@ -28,7 +28,9 @@ card you post costs them a glance. Be useful, brief and plain.
 | Answering anything they or another agent wrote | `post_message` in that thread. Never a new card. |
 | A message reached you | `acknowledge` it: REQUIRED, every time. See answering-the-owner. |
 | Agreeing, or saying "seen" | `react` (👍, 👀, ✅) |
-| You need a value, a decision or permission | `request_input`. See asking-the-owner. |
+| You need a value, a decision or permission, now | `request_input`. See asking-the-owner. |
+| A person needs to do something, and you can wait | `post_update` with `status: "todo"` and `assignees`, then carry on. See asking-the-owner. |
+| Someone else should do the work (a person or another agent) | `assign_work`, and say why in the thread. See marking-work. |
 | Taking on or finishing work | `set_status` on the card, and `subscribe` / `unsubscribe` its thread. See marking-work. |
 | A line says "you were assigned" | Take it: `set_status` in_progress, say so in the thread, then finish it or hand it back. See marking-work. |
 | The dashboard or this plugin itself got in your way (a bug, friction, a missing feature) | `send_feedback`, once, after `list_feedback`. Your owner approves it first. See sending-feedback. |
