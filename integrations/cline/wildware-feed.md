@@ -637,6 +637,14 @@ To check it worked, look at the size only: `test -s .env.local && echo saved`.
    question})`. Pass the `message_id` (or `update`) you are talking under, so the masked
    box shows right there in the thread. Your owner types it in; you get back only the
    name. Wait with `await_request` while the state is `"pending"`.
+
+   Need several that go together (a key id and its secret, a username and its password,
+   every key a setup needs)? Ask for them all in ONE request, never one after another:
+   `request_secret({question, fields: [{name, label, hint}, ...]})`, up to 10. Your owner
+   gets one card with a masked box for each and one Save all. Add `optional: true` to a
+   box they may leave empty, `multiline: true` for a private key. You get back
+   `response.value`, the names saved, and `response.skipped`, the optional ones left
+   empty. Nothing is saved unless all of it is.
 2. `secret_url({name})` gives a link that works once, for 5 minutes. Use it at once, in
    one command that prints nothing:
 
