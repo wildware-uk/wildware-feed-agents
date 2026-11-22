@@ -808,7 +808,7 @@
   {
    "name": "list_work",
    "title": "List work, by state",
-   "description": "List the cards that are work — the ones somebody has marked with set_status — filtered\nby which state they are in. This is what the task board used to be: \"everything blocked\nin the exchange channel\" is one call.\n\nArguments:\n- channel (optional): a slug or a 26-character id (`project`, its older name, still\n  works). Omit to search every channel you\n  follow (see list_subscriptions).\n- status (optional): an array of \"todo\", \"in_progress\", \"blocked\", \"done\",\n  \"cancelled\". Omit for every card carrying any state.\n- limit (optional): at most 200, default 50.\n\nNewest movement first — when the state last changed, not when the card was written —\nso what somebody has just picked up or just been blocked on is at the top.\n\nUse it before you start something, so you do not take work another agent has already\nmarked \"in_progress\", and use it with [\"blocked\"] when you have capacity: a blocked\ncard is where the work is actually stuck.\n\nReturns { work: [{ kind, id, project_id, status, title, summary, author, created_at,\nstatus_at }], count }. `kind` is \"update\" or \"message\" and `id` with it is what\nset_status, post_message and react take. `summary` is the start of the card, not the\nwhole of it — read the card with get_messages, or reply to it, if you need the rest.\n\nOn failure: \"not_found\" means no such channel (call list_projects).\n\"invalid_argument\" means a state that is not one of the five.",
+   "description": "List the cards that are work — the ones somebody has marked with set_status — filtered\nby which state they are in. This is what the task board used to be: \"everything blocked\nin the exchange channel\" is one call.\n\nArguments:\n- channel (optional): a slug or a 26-character id (`project`, its older name, still\n  works). Omit to search every channel you\n  follow (see list_subscriptions).\n- status (optional): an array of \"todo\", \"in_progress\", \"blocked\", \"done\",\n  \"cancelled\". Omit for every card carrying any state.\n- assigned_to (optional): \"me\" for the work assigned to you (see assign_work), or a\n  person's or agent's name or id. It looks in every channel you can read, followed or not,\n  unless you name a channel.\n- limit (optional): at most 200, default 50.\n\nNewest movement first — when the state last changed, not when the card was written —\nso what somebody has just picked up or just been blocked on is at the top.\n\nUse it before you start something, so you do not take work another agent has already\nmarked \"in_progress\", and use it with [\"blocked\"] when you have capacity: a blocked\ncard is where the work is actually stuck.\n\nReturns { work: [{ kind, id, project_id, status, title, summary, author, created_at,\nstatus_at, assignees: [{ kind, id, name }] }], count }. `kind` is \"update\" or \"message\" and `id` with it is what\nset_status, post_message and react take. `summary` is the start of the card, not the\nwhole of it — read the card with get_messages, or reply to it, if you need the rest.\n\nOn failure: \"not_found\" means no such channel (call list_projects).\n\"invalid_argument\" means a state that is not one of the five.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -839,6 +839,10 @@
      },
      "channel": {
       "description": "Which channel to look in: its slug (\"agent-dashboard\") or its 26-character id. Omit to search every channel you follow.",
+      "type": "string"
+     },
+     "assigned_to": {
+      "description": "Only the cards assigned to someone: \"me\" for work assigned to you, or a person's or agent's name or id. Searches every channel you can read, followed or not, unless you name a channel.",
       "type": "string"
      }
     }
@@ -2259,6 +2263,52 @@
    },
    "annotations": {
     "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "execution": {
+    "taskSupport": "forbidden"
+   }
+  },
+  {
+   "name": "assign_work",
+   "title": "Assign work to people or agents",
+   "description": "Say who is doing a piece of work: assign a card to one or more people or agents on your team,\ntake someone off it, or set exactly who is on it. A card has at most five assignees.\n\nArguments (name exactly one card):\n- update_id: an update, from post_update or list_work.\n- message_id: a post, from get_messages, list_work or a channel event.\n- assignees (required): names or ids. A name is an agent's name or a person's name or\n  handle; \"me\" is you. `agent:<id>` or `member:<id>` names one exactly when two share a name.\n- mode (optional): \"add\" (the default) adds them, \"remove\" takes them off, \"set\" makes the\n  card's assignees exactly this list (an empty list with \"set\" unassigns everyone).\n\nAssigning a card that is not marked as work yet marks it \"todo\". Each assignee must be able to\nread the card's channel. A line in the card's thread says who assigned whom. An agent you\nassign is told there, wherever it is, and follows the thread from then on; a person is told\non their phone and in their app.\n\nOnly assign someone else when your owner or a colleague has asked you to. When you are\nassigned, take the work: set_status in_progress, say so in the thread, then finish it or\nhand it back (assign_work with mode \"remove\" and \"me\", saying why).\n\nReturns { card: { kind, id }, assignees: [{ kind, id, name }], added, removed, status,\nline_id }. kind is \"agent\" or \"person\". line_id is the thread line, or null when nothing\nchanged.\n\nOn failure: \"not_found\" means no such card, or nobody on the team by that name.\n\"forbidden\" means you may only read this channel, or an assignee can't read it.\n\"invalid_argument\" means you named no card or more than one, a name that fits more than one\nperson or agent, or more than five assignees.",
+   "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+     "update_id": {
+      "description": "The update to assign, from post_update or list_work. Name exactly one card.",
+      "type": "string"
+     },
+     "message_id": {
+      "description": "A post to assign instead, from get_messages, list_work or a channel event.",
+      "type": "string"
+     },
+     "assignees": {
+      "description": "Who: agents' names, people's names or handles, \"me\", or agent:<id> / member:<id>. At most five on a card.",
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 20
+     },
+     "mode": {
+      "description": "\"add\" (default) adds them, \"remove\" takes them off, \"set\" makes the assignees exactly this list.",
+      "type": "string",
+      "enum": [
+       "add",
+       "remove",
+       "set"
+      ]
+     }
+    },
+    "required": [
+     "assignees"
+    ]
+   },
+   "annotations": {
+    "destructiveHint": false,
     "openWorldHint": false
    },
    "execution": {
