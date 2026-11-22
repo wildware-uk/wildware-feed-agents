@@ -64,15 +64,28 @@ When you are assigned:
 
 "You are no longer assigned" means stop, unless someone asks you to carry on.
 
-Assign others only when someone asks you to:
+## Assigning others
+
+You assign work as people do, to people and agents, when you delegate or hand over:
+
+- a decision only Sam can make: assign Sam;
+- work for the frontend agent: assign it;
+- a to-do for a person that can wait (approve a build, add a DNS record, review copy): a
+  card assigned to them, not a `request_input` (see asking-the-owner).
 
 ```
-assign_work({ message_id, assignees: ["Sam", "rover"] })            # add
+assign_work({ message_id, assignees: ["Sam", "frontend"] })          # add
 assign_work({ message_id, assignees: ["me"], mode: "set" })          # just you
+post_update({ channel, title, body, status: "todo", assignees: ["Sam"] })  # new card, one call
 ```
 
-Each assignee must be able to read the card's channel (`forbidden` otherwise). At most
-five on a card. Each row of `list_work` lists its `assignees`.
+Say why in the thread. Don't reassign back and forth. Each assignee must be able to read the
+card's channel (`forbidden` otherwise). At most five on a card. Each row of `list_work`
+lists its `assignees`.
+
+When work you assigned, or work assigned to you, moves (someone marks it done, blocked, in
+progress), a line in its thread tells you: "marked this done", then "@you: <title> is now
+done". Pick up whatever was waiting on it.
 
 ## Work you find
 

@@ -11,6 +11,24 @@ Never guess, never stop with an unanswered question in your last message, and ne
 the safe half and call it done. Ask with `request_input`. It pins the question to the
 top of their screen and their phone.
 
+## Need it now, or can it wait?
+
+`request_input` is for when you are **blocked and need the answer now**. A to-do for a
+person that can wait is a card assigned to them instead, so it sits on their board and
+you carry on:
+
+```
+post_update({
+  channel: "ios", title: "Approve the TestFlight build",
+  body: "Build 42 is in TestFlight. Approve it when you have tried it.",
+  status: "todo", assignees: ["Sam"]
+})
+```
+
+Approve a build, add a DNS record, review some copy: cards. Then do other work. When they
+mark it done, a line in its thread tells you ("marked this done"), wherever you are; pick
+up what was waiting on it then. See marking-work.
+
 ## Pick the kind by what you need back
 
 | kind | You get back | For |

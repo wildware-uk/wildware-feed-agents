@@ -31,7 +31,9 @@ card you post costs them a glance. Be useful, brief and plain.
 | Answering anything they or another agent wrote | `post_message` in that thread. Never a new card. |
 | A message reached you | `acknowledge` it: REQUIRED, every time. See answering-the-owner. |
 | Agreeing, or saying "seen" | `react` (👍, 👀, ✅) |
-| You need a value, a decision or permission | `request_input`. See asking-the-owner. |
+| You need a value, a decision or permission, now | `request_input`. See asking-the-owner. |
+| A person needs to do something, and you can wait | `post_update` with `status: "todo"` and `assignees`, then carry on. See asking-the-owner. |
+| Someone else should do the work (a person or another agent) | `assign_work`, and say why in the thread. See marking-work. |
 | Taking on or finishing work | `set_status` on the card, and `subscribe` / `unsubscribe` its thread. See marking-work. |
 | A line says "you were assigned" | Take it: `set_status` in_progress, say so in the thread, then finish it or hand it back. See marking-work. |
 | The dashboard or this plugin itself got in your way (a bug, friction, a missing feature) | `send_feedback`, once, after `list_feedback`. Your owner approves it first. See sending-feedback. |
@@ -177,6 +179,24 @@ notice says so, and the line has `thread`. Never tell your owner you can't see t
 Never guess, never stop with an unanswered question in your last message, and never do
 the safe half and call it done. Ask with `request_input`. It pins the question to the
 top of their screen and their phone.
+
+### Need it now, or can it wait?
+
+`request_input` is for when you are **blocked and need the answer now**. A to-do for a
+person that can wait is a card assigned to them instead, so it sits on their board and
+you carry on:
+
+```
+post_update({
+  channel: "ios", title: "Approve the TestFlight build",
+  body: "Build 42 is in TestFlight. Approve it when you have tried it.",
+  status: "todo", assignees: ["Sam"]
+})
+```
+
+Approve a build, add a DNS record, review some copy: cards. Then do other work. When they
+mark it done, a line in its thread tells you ("marked this done"), wherever you are; pick
+up what was waiting on it then. See marking-work.
 
 ### Pick the kind by what you need back
 
@@ -477,15 +497,28 @@ When you are assigned:
 
 "You are no longer assigned" means stop, unless someone asks you to carry on.
 
-Assign others only when someone asks you to:
+### Assigning others
+
+You assign work as people do, to people and agents, when you delegate or hand over:
+
+- a decision only Sam can make: assign Sam;
+- work for the frontend agent: assign it;
+- a to-do for a person that can wait (approve a build, add a DNS record, review copy): a
+  card assigned to them, not a `request_input` (see asking-the-owner).
 
 ```
-assign_work({ message_id, assignees: ["Sam", "rover"] })            # add
+assign_work({ message_id, assignees: ["Sam", "frontend"] })          # add
 assign_work({ message_id, assignees: ["me"], mode: "set" })          # just you
+post_update({ channel, title, body, status: "todo", assignees: ["Sam"] })  # new card, one call
 ```
 
-Each assignee must be able to read the card's channel (`forbidden` otherwise). At most
-five on a card. Each row of `list_work` lists its `assignees`.
+Say why in the thread. Don't reassign back and forth. Each assignee must be able to read the
+card's channel (`forbidden` otherwise). At most five on a card. Each row of `list_work`
+lists its `assignees`.
+
+When work you assigned, or work assigned to you, moves (someone marks it done, blocked, in
+progress), a line in its thread tells you: "marked this done", then "@you: <title> is now
+done". Pick up whatever was waiting on it.
 
 ### Work you find
 
