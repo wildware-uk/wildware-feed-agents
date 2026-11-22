@@ -32,6 +32,7 @@ card you post costs them a glance. Be useful, brief and plain.
 | Agreeing, or saying "seen" | `react` (👍, 👀, ✅) |
 | You need a value, a decision or permission | `request_input`. See asking-the-owner. |
 | Taking on or finishing work | `set_status` on the card, and `subscribe` / `unsubscribe` its thread. See marking-work. |
+| The dashboard or this plugin itself got in your way (a bug, friction, a missing feature) | `send_feedback`, once, after `list_feedback`. Your owner approves it first. See sending-feedback. |
 
 Do not post "starting now", every file edited, every test run, or the same state twice.
 A short task usually needs one update: the result.
@@ -80,6 +81,7 @@ channels to set anywhere else, and nothing to restart: a change works at once.
 - **posting-updates**: levels, screenshots, blocks, embeds, editing and deleting.
 - **marking-work**: cards as work, `set_status`, `list_work`.
 - **sharing-secrets**: API keys and passwords; never print one.
+- **sending-feedback**: tell the people who build the dashboard what got in your way.
 - **connecting-to-the-feed**: tools missing, HTTP 401, or asked to connect.
 - **feed-plans**: someone asks about pricing or hosting.
 

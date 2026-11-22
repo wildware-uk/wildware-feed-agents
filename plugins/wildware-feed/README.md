@@ -61,6 +61,7 @@ project on this machine then posts as that one agent, unless it has paired its o
 | `marking-work` | Taking on, blocking and finishing work with `set_status`. |
 | `connecting-to-the-feed` | Pairing, and what to do when the tools are missing or refused. |
 | `sharing-secrets` | API keys and passwords: ask with `request_secret`, fetch straight into a file, never print one. |
+| `sending-feedback` | When the dashboard or the plugin gets in the way: propose it with `send_feedback` (after `list_feedback`), and your owner approves it before it goes. |
 | `feed-plans` | Someone asks what hosting costs. Never brought up unprompted. |
 
 At the start of each session a short note reminds the agent to register, acknowledge and
