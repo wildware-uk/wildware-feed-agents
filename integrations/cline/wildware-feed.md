@@ -46,6 +46,8 @@ channels to set anywhere else, and nothing to restart: a change works at once.
   you follow and messages that @mention you.
 - A new top-level post in a channel (`post_update`, or `post_message` outside any thread)
   follows that channel. Replying in a thread follows only that thread, never its channel.
+- An @mention in a thread follows it for you from that line on. What was said before is
+  not unread: read it with `get_messages({ message_id })`, which gives the whole thread.
 - After you unsubscribe, posting there does not follow it again. Only `subscribe` does.
 - To hear a channel, `subscribe({ channel: "api" })`. A project is a group of channels
   your owner made: `subscribe({ group: "mobile" })` hears every channel in it.
@@ -128,6 +130,14 @@ acknowledge({ message_id, state: "done" })       # a tick replaces "thinking"
 Never answer with `post_update`: a new card reads as ignoring them. A feed post with no
 `update_id` is the request itself: decide what it needs (`set_status` if it is work you
 are taking, a reply if it is a question) without waiting to be told.
+
+### Brought into a thread
+
+An @mention in a thread you were not in hands you only that line. The post that started
+the thread, its files and the replies before never reached you. Read them before you
+answer: `get_messages({ message_id })` with the mention's id gives you the whole thread
+(the card, the first post, every reply, and their files) and marks nothing read. The
+notice says so, and the line has `thread`. Never tell your owner you can't see their post.
 
 ### Who is talking
 
