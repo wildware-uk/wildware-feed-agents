@@ -2146,7 +2146,7 @@
   {
    "name": "send_feedback",
    "title": "Propose feedback or a feature request",
-   "description": "Propose feedback about the dashboard or this plugin, or a feature you need, for the people\nwho build it. Your owner decides first: this puts a question on their dashboard showing your\ntext, which an owner or an admin can edit, send, or discard. Nothing leaves your team until\none of them sends it.\n\nUse it when something real got in your way while you worked here: a bug, a confusing tool,\nfriction, or a missing feature. Not for your owner's own project, and not to chat. One idea\nper call, concrete and short: what you tried, what happened, what would have helped. Call\nlist_feedback first and don't send one your team already has.\n\nNever put a secret, a token, a password or private customer data in it: text that looks like\na key is refused.\n\nArguments: kind, title and body are required.\n- kind: \"feedback\" (about something that exists) or \"feature_request\" (something missing).\n- area (optional): feed, threads, voice, secrets, apps, agents (agents and this plugin),\n  billing or other.\n- title: one line, at most 120 characters.\n- body: markdown, at most 5000 characters.\n- media_ids (optional): up to 6 uploads from create_upload, such as a screenshot.\n- update_id, message_id or request_id (optional): the card it is about. Pass one at most.\n- channel (optional): where the question to your owner shows.\n\nReturns { feedback: { id, status: \"pending\", ... }, request_id, state: \"pending\" }. You hear\nyour owner's choice as an answer event on request_id, or with await_request({request_id}):\nanswered with \"Send to ...\" means it was sent (maybe edited); \"Discard\", dismissed or timed\nout means it was not. list_feedback shows its status and any reply later.\n\nOn failure: \"invalid_argument\" for a bad kind, area or length, or text that looks like a\nsecret; \"conflict\" if you already sent one with this title today; \"rate_limited\" after 20 in\na day.",
+   "description": "Propose feedback about the dashboard or this plugin, or a feature you need, for the people\nwho build it (it goes to their feedback inbox, Sentry). Your owner decides first: this puts a question on their dashboard showing your\ntext, which an owner or an admin can edit, send, or discard. Nothing leaves your team until\none of them sends it.\n\nUse it when something real got in your way while you worked here: a bug, a confusing tool,\nfriction, or a missing feature. Not for your owner's own project, and not to chat. One idea\nper call, concrete and short: what you tried, what happened, what would have helped. Call\nlist_feedback first and don't send one your team already has.\n\nNever put a secret, a token, a password or private customer data in it: text that looks like\na key is refused.\n\nArguments: kind, title and body are required.\n- kind: \"feedback\" (about something that exists) or \"feature_request\" (something missing).\n- area (optional): feed, threads, voice, secrets, apps, agents (agents and this plugin),\n  billing or other.\n- title: one line, at most 120 characters.\n- body: markdown, at most 5000 characters.\n- media_ids (optional): up to 6 uploads from create_upload, such as a screenshot.\n- update_id, message_id or request_id (optional): the card it is about. Pass one at most.\n- channel (optional): where the question to your owner shows.\n\nReturns { feedback: { id, status: \"pending\", ... }, request_id, state: \"pending\" }. You hear\nyour owner's choice as an answer event on request_id, or with await_request({request_id}):\nanswered with \"Send to ...\" (or \"Save it\", on a server that sends feedback nowhere) means it\nwent, maybe edited; \"Discard\", dismissed or timed out means it did not. list_feedback shows\nits status later.\n\nOn failure: \"invalid_argument\" for a bad kind, area or length, or text that looks like a\nsecret; \"conflict\" if you already sent one with this title today; \"rate_limited\" after 20 in\na day.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -2230,7 +2230,7 @@
   {
    "name": "list_feedback",
    "title": "List your team's feedback",
-   "description": "List the feedback and feature requests your team has sent or is deciding on, newest first:\npeople's and agents', with each one's status and the product team's reply. Check it before\nsend_feedback so you don't send the same idea twice.\n\nArguments (all optional):\n- mine: true for only the ones you proposed.\n- status: pending (waiting for your owner), discarded, sent, reviewing, planned, done or\n  declined.\n- limit: at most this many, 1 to 100 (default 50).\n\nReturns { feedback: [{ id, kind, area, title, body, status, author: { kind, name }, card,\nrequest_id, reply, created_at, sent_at }] }. A long body is cut to 300 characters.",
+   "description": "List the feedback and feature requests your team has sent or is deciding on, newest first:\npeople's and agents', with each one's status. Check it before send_feedback so you don't send\nthe same idea twice.\n\nArguments (all optional):\n- mine: true for only the ones you proposed.\n- status: pending (waiting for your owner), discarded, sent, or saved (kept on this server,\n  which sends feedback nowhere).\n- limit: at most this many, 1 to 100 (default 50).\n\nReturns { feedback: [{ id, kind, area, title, body, status, author: { kind, name }, card,\nrequest_id, created_at, sent_at }] }. A long body is cut to 300 characters.",
    "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -2245,10 +2245,7 @@
        "pending",
        "discarded",
        "sent",
-       "reviewing",
-       "planned",
-       "done",
-       "declined"
+       "saved"
       ],
       "description": "Only items in this state."
      },
