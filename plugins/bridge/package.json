@@ -13,12 +13,12 @@
 		"integrations": "node integrations.mjs"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "1.30.0"
+		"@modelcontextprotocol/sdk": "1.32.2"
 	},
 	"devDependencies": {
 		"@types/node": "24.13.3",
 		"esbuild": "0.28.2",
 		"smol-toml": "1.9.1",
-		"vitest": "4.1.11"
+		"vitest": "4.1.12"
 	}
 }
