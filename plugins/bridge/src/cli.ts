@@ -10,6 +10,8 @@
  *   forget        drop this project's token
  *   secret get    fetch a secret straight into a file (0600); prints only "saved …"
  *   secret put    hand a file to the owner as a secret; prints only "saved …"
+ *   prompt        the PermissionRequest hook: asks the owner on the dashboard too (./prompts.ts)
+ *   refused       the Stop, SubagentStop and PermissionDenied hooks: lists refused tool calls
  *
  * Every command takes `--data <plugin data dir>` and `--project <dir>`; the
  * plugin's own files pass `${CLAUDE_PLUGIN_DATA}` and `${CLAUDE_PROJECT_DIR}`.
@@ -26,6 +28,7 @@ import { channelIsLive, CLAIM_EVERY_MS } from './claim';
 import { runMonitor } from './monitor';
 import { getSecret, putSecret, SecretError } from './secret';
 import { watch } from './follow';
+import { permissionPrompt, promptsOn, reportRefusals, type Dashboard, type HookInput } from './prompts';
 
 /**
  * What the hook saves for the monitor. No token: that is in the store.
@@ -108,6 +111,31 @@ export function connection(store: Store, env: NodeJS.ProcessEnv): { url: string;
 	const token = store.resolve(env, url);
 	if (!token) return null;
 	return { url, token: token.token, monitor };
+}
+
+/**
+ * Where the prompt hooks ask, and as whom: the dashboard this plugin is set up for and this
+ * project's token for it. Null when prompts are off, or the project is not paired.
+ */
+export function promptTarget(store: Store, env: NodeJS.ProcessEnv): Dashboard | null {
+	if (!promptsOn(env)) return null;
+	const url = settingsFrom(env).url || env.AGENT_DASHBOARD_URL?.trim() || readSettings(store)?.url;
+	if (!url) return null;
+	const token = store.resolve(env, url);
+	if (!token) return null;
+	return { url, token: token.token, agent: token.name };
+}
+
+/** A hook's stdin, as JSON. Anything else is an empty input, which the hooks ignore. */
+async function hookInput(): Promise<HookInput> {
+	const chunks: Buffer[] = [];
+	for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+	try {
+		const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+		return typeof parsed === 'object' && parsed !== null ? (parsed as HookInput) : {};
+	} catch {
+		return {};
+	}
 }
 
 /** True when two connections reach the same dashboard with the same token. */
@@ -316,6 +344,32 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env, 
 			say('Usage: pair start --url <dashboard> --name <agent name> [--new-dashboard <host>] | pair wait');
 			return 2;
 		}
+		case 'prompt': {
+			// Any failure here leaves the decision to the terminal: print nothing, exit 0.
+			const input = await hookInput();
+			const target = promptTarget(store, env);
+			if (!target) return 0;
+			const log = (line: string) => process.stderr.write(`wildware-feed prompt: ${line}\n`);
+			try {
+				const out = await permissionPrompt(input, target, {}, { log });
+				if (out) say(JSON.stringify(out));
+			} catch (e) {
+				log(e instanceof Error ? e.message : 'failed');
+			}
+			return 0;
+		}
+		case 'refused': {
+			const input = await hookInput();
+			const target = promptTarget(store, env);
+			if (!target) return 0;
+			const log = (line: string) => process.stderr.write(`wildware-feed refused: ${line}\n`);
+			try {
+				await reportRefusals(input, target, store.data, { log });
+			} catch (e) {
+				log(e instanceof Error ? e.message : 'failed');
+			}
+			return 0;
+		}
 		case 'secret': {
 			const name = positionals[2];
 			const usage =
@@ -348,7 +402,7 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env, 
 			}
 		}
 		default:
-			say('Usage: feed.mjs <headers|session-start|monitor|status|forget|pair start|pair wait|secret get|secret put> --data <dir> [--project <dir>]');
+			say('Usage: feed.mjs <headers|session-start|monitor|status|forget|pair start|pair wait|secret get|secret put|prompt|refused> --data <dir> [--project <dir>]');
 			return 2;
 	}
 }

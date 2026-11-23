@@ -74,7 +74,8 @@ const NEUTRAL_EDITS = {
 	},
 	'marking-work': (t, w) => swap(t, 'heartbeat or monitor line reports', 'heartbeat reports', w),
 	'working-with-the-feed': (t, w) => swap(t, 'a message, monitor line or channel event arrived.', 'a message arrived.', w),
-	'sharing-secrets': (t, w) => dropSection(t, '## With the Claude Code plugin', w)
+	'sharing-secrets': (t, w) => dropSection(t, '## With the Claude Code plugin', w),
+	'asking-the-owner': (t, w) => dropSection(t, '## With the Claude Code plugin: prompts reach the dashboard too', w)
 };
 
 /** The skills as any Agent Skills client reads them: `{ name: { 'SKILL.md': text, ...extras } }`. */

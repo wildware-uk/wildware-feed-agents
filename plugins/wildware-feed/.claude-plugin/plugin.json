@@ -38,6 +38,12 @@
 			"title": "Background monitor",
 			"description": "`auto` (default) runs a background monitor so replies arrive without the channel flag. `off` turns it off.",
 			"required": false
+		},
+		"prompts": {
+			"type": "string",
+			"title": "Prompts on the dashboard",
+			"description": "`auto` (default) also sends permission prompts and AskUserQuestion to your dashboard, so you can answer from your phone, and lists refused tool calls there. `off` keeps them in the terminal only.",
+			"required": false
 		}
 	},
 	"channels": [

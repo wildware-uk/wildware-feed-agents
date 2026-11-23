@@ -17772,6 +17772,14 @@ function writeSecret(path, value) {
 // src/pair.ts
 var WAIT_BUDGET_MS = 9 * 6e4;
 
+// src/redact.ts
+var WORD = String.raw`(?:"(?:[^"\\]|\\.)*"|'[^']*'|[^\s;&|]+)`;
+
+// src/prompts.ts
+var WAIT_MS = 15 * 6e4;
+var CARD_FOR_MS = 30 * 6e4;
+var TAIL_BYTES = 4 * 1024 * 1024;
+
 // src/cli.ts
 function readSettings(store2) {
   try {

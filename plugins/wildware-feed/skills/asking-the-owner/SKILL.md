@@ -105,6 +105,20 @@ then carry on with something else or stop.
 - `edit_request` fixes a pending question or draft without losing what they typed.
 - `withdraw_request` takes it down the moment it stops mattering.
 
+## With the Claude Code plugin: prompts reach the dashboard too
+
+The plugin sends your permission prompts and `AskUserQuestion` to your owner's dashboard
+as well as the terminal, so they can answer from their phone. The first answer counts,
+from either place. You do nothing different:
+
+- Do not repeat an `AskUserQuestion` with `request_input`: it is already on their screen.
+- A denial that says "Your owner refused this on the Wildware Feed dashboard" is their no.
+  Do not try the same thing another way; ask with `request_input` if you still need it.
+- Refused tool calls are listed for them on a low-priority card on their own. Do not post
+  about each one.
+
+The owner turns this off with the plugin's `prompts` setting.
+
 ## Priority
 
 `high` reaches their phone. `critical` rings through Do Not Disturb: only when the owner

@@ -5,8 +5,8 @@ const require = __feedRequire(import.meta.url);
 
 // src/cli.ts
 import { parseArgs } from "node:util";
-import { basename as basename2, dirname as dirname3, join as join4, resolve as resolve3 } from "node:path";
-import { readFileSync as readFileSync4 } from "node:fs";
+import { basename as basename3, dirname as dirname4, join as join5, resolve as resolve3 } from "node:path";
+import { readFileSync as readFileSync5 } from "node:fs";
 
 // src/store.ts
 import { createHash } from "node:crypto";
@@ -497,17 +497,17 @@ function describeReaction(frame) {
   return `Your owner ${verb} ${tagValue(frame.emoji, 16)} on ${whose} (${where}): ${about}`;
 }
 function describeBlock(frame) {
-  const who = frame.by?.name ?? "Your owner";
+  const who2 = frame.by?.name ?? "Your owner";
   const where = place(frame);
   const block = frame.block_title ? slot(frame.block_title) : `block ${frame.block_id}`;
   if (frame.action === "check") {
     const line = (frame.item_text ?? frame.item_id ?? "").trim();
     const verb = frame.done ? "ticked" : "unticked";
-    return `${who} ${verb} ${slot(line, 120)} on your checklist ${block} (${where}).`;
+    return `${who2} ${verb} ${slot(line, 120)} on your checklist ${block} (${where}).`;
   }
   const chosen = (frame.options ?? []).map((o) => o.label);
-  if (chosen.length === 0) return `${who} took back their vote on your poll ${block} (${where}).`;
-  return `${who} voted for ${chosen.join(", ")} on your poll ${block} (${where}).`;
+  if (chosen.length === 0) return `${who2} took back their vote on your poll ${block} (${where}).`;
+  return `${who2} voted for ${chosen.join(", ")} on your poll ${block} (${where}).`;
 }
 function describeAnswer(frame) {
   const question = frame.question.trim();
@@ -691,7 +691,7 @@ async function runBridge(options) {
       if (held) Object.assign(attributes, meta(held.work));
       const where = place(message);
       const byOwner = message.author === "human";
-      const who = byOwner ? "Your owner" : agentLabel(message);
+      const who2 = byOwner ? "Your owner" : agentLabel(message);
       attributes.from = byOwner ? "owner" : "agent";
       if (!byOwner) {
         attributes.agent = tagValue(message.author);
@@ -706,7 +706,7 @@ async function runBridge(options) {
       }
       const about = message.request_id ? " about your open question" : "";
       await send2(
-        `${who} on ${where}${about}${quoting(message.in_reply_to)}: ${messageBody(message.body, byOwner)}` + describeAttachments(message.media),
+        `${who2} on ${where}${about}${quoting(message.in_reply_to)}: ${messageBody(message.body, byOwner)}` + describeAttachments(message.media),
         attributes
       );
       remember(message.message_id);
@@ -866,16 +866,16 @@ async function quietFetch(io, failed, input, init) {
   }
 }
 function linkFrom(dashboard, link) {
-  const home = origin(dashboard);
+  const home2 = origin(dashboard);
   let target;
   try {
-    target = new URL(link, `${home}/`);
+    target = new URL(link, `${home2}/`);
   } catch {
     throw new SecretError("the dashboard gave a link that is not a URL");
   }
   if (target.username || target.password) throw new SecretError("the dashboard gave a link with a password in it");
-  if (target.origin !== home) {
-    throw new SecretError(`the dashboard gave a link on another address (${target.protocol}//${target.host}), not ${home}: set dashboard_url to the dashboard's own address`);
+  if (target.origin !== home2) {
+    throw new SecretError(`the dashboard gave a link on another address (${target.protocol}//${target.host}), not ${home2}: set dashboard_url to the dashboard's own address`);
   }
   return target.href;
 }
@@ -1038,6 +1038,579 @@ function watch(opened, current, same, everyMs, parent) {
   };
 }
 
+// src/prompts.ts
+import { closeSync as closeSync2, existsSync as existsSync2, mkdirSync as mkdirSync3, openSync as openSync2, readdirSync, readSync, readFileSync as readFileSync4, rmSync as rmSync3, statSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { homedir } from "node:os";
+import { basename as basename2, dirname as dirname3, join as join4 } from "node:path";
+
+// src/redact.ts
+var MAX_COMMAND = 300;
+var HIDDEN = "***";
+var SECRET_FLAG = /(?:passw(?:or)?d|passphrase|secret|token|api-?key|access-?key|private-?key|authorization|credential|cookie)/i;
+var SECRET_PARAM = /(?:pass(?:word|wd)?|secret|token|api[-_]?key|access[-_]?key|auth|credential|session|signature|sig|key)/i;
+var SECRET_SHAPES = [
+  /\bsk-[A-Za-z0-9_-]{12,}/g,
+  // OpenAI, Anthropic, Stripe
+  /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}/g,
+  // GitHub
+  /\bgithub_pat_[A-Za-z0-9_]{20,}/g,
+  /\bxox[abposr]-[A-Za-z0-9-]{10,}/g,
+  // Slack
+  /\bAKIA[0-9A-Z]{16}\b/g,
+  // AWS access key
+  /\bAIza[0-9A-Za-z_-]{30,}/g,
+  // Google
+  /\bglpat-[A-Za-z0-9_-]{16,}/g,
+  // GitLab
+  /\bnpm_[A-Za-z0-9]{30,}/g,
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g,
+  // a JWT
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
+  /\b[A-Fa-f0-9]{32,}\b/g,
+  // a long hex string
+  /\b(?=[A-Za-z0-9+_]*\d)(?=[A-Za-z0-9+_]*[a-z])(?=[A-Za-z0-9+_]*[A-Z])[A-Za-z0-9+_]{40,}={0,2}/g
+  // a long base64-ish string
+];
+var WORD = String.raw`(?:"(?:[^"\\]|\\.)*"|'[^']*'|[^\s;&|]+)`;
+function redact(text) {
+  let out = text;
+  out = out.replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g, HIDDEN);
+  out = out.replace(/(\b[a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi, `$1${HIDDEN}@`);
+  out = out.replace(/((?:authorization|proxy-authorization|cookie|x-[a-z-]*(?:key|token|secret))\s*:\s*)(?:(?:bearer|basic|token)\s+)?[^\s'"]+/gi, `$1${HIDDEN}`);
+  out = out.replace(new RegExp(String.raw`(^|[\s;(])((?:export\s+)?[A-Za-z_][A-Za-z0-9_]*=)${WORD}`, "g"), `$1$2${HIDDEN}`);
+  out = out.replace(new RegExp(String.raw`(\s--?[A-Za-z0-9-]*${SECRET_FLAG.source}[A-Za-z0-9-]*)(=|\s+)${WORD}`, "gi"), `$1$2${HIDDEN}`);
+  out = out.replace(/(\s(?:-u|--user)(?:\s+|=))[^\s:'"]+:[^\s'"]+/g, `$1${HIDDEN}`);
+  out = out.replace(new RegExp(String.raw`([?&][A-Za-z0-9_.-]*${SECRET_PARAM.source}[A-Za-z0-9_.-]*=)[^&\s'"#]+`, "gi"), `$1${HIDDEN}`);
+  for (const shape of SECRET_SHAPES) out = out.replace(shape, HIDDEN);
+  return out;
+}
+function truncate(text, max = MAX_COMMAND) {
+  const flat = text.replace(/\s*\n\s*/g, " \u23CE ").trim();
+  return flat.length <= max ? flat : `${flat.slice(0, max - 1).trimEnd()}\u2026`;
+}
+function safeUrl(url) {
+  return truncate(redact(url), 200);
+}
+function str(value) {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+function describeCall(toolName, input) {
+  const args = input ?? {};
+  const path = str(args.file_path) ?? str(args.notebook_path) ?? str(args.path);
+  switch (toolName) {
+    case "Bash":
+      return { action: "run a command", subject: truncate(redact(str(args.command) ?? "")) };
+    case "Write":
+      return { action: "write a file", subject: truncate(path ?? "?", 200) };
+    case "Edit":
+    case "MultiEdit":
+      return { action: "edit a file", subject: truncate(path ?? "?", 200) };
+    case "NotebookEdit":
+      return { action: "edit a notebook", subject: truncate(path ?? "?", 200) };
+    case "Read":
+      return { action: "read a file", subject: truncate(path ?? "?", 200) };
+    case "Glob":
+    case "Grep":
+      return { action: "search files", subject: truncate(redact(`${str(args.pattern) ?? ""}${path ? ` in ${path}` : ""}`), 200) };
+    case "WebFetch":
+      return { action: "fetch a web page", subject: safeUrl(str(args.url) ?? "?") };
+    case "WebSearch":
+      return { action: "search the web", subject: truncate(redact(str(args.query) ?? ""), 200) };
+    case "Task":
+    case "Agent":
+      return { action: "start a helper agent", subject: truncate(redact(str(args.description) ?? ""), 200) };
+    default: {
+      const keys = Object.keys(args).slice(0, 8).join(", ");
+      const mcp = /^mcp__(.+?)__(.+)$/.exec(toolName);
+      const name = mcp ? `${mcp[2]} (${mcp[1]})` : toolName;
+      return { action: `use ${name}`, subject: keys ? `arguments: ${keys}` : "no arguments" };
+    }
+  }
+}
+
+// src/prompts.ts
+var WAIT_MS = 15 * 6e4;
+var GRACE_MS = 5e3;
+var WATCH_MS = 1500;
+var CARD_FOR_MS = 30 * 6e4;
+var CARD_LINES = 12;
+var DENIED_ON_DASHBOARD = "Your owner refused this on the Wildware Feed dashboard.";
+function promptsOn(env) {
+  const value = env.CLAUDE_PLUGIN_OPTION_PROMPTS?.trim() || env.AGENT_DASHBOARD_PROMPTS?.trim() || "auto";
+  return value.toLowerCase() !== "off";
+}
+var DashboardError = class extends Error {
+};
+async function callTool(d, name, args, io = {}, signal) {
+  let response;
+  try {
+    response = await (io.fetch ?? globalThis.fetch)(`${origin(d.url)}/mcp`, {
+      method: "POST",
+      // The token never follows a redirect.
+      redirect: "error",
+      signal,
+      headers: { Authorization: `Bearer ${d.token}`, Accept: "application/json, text/event-stream", "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } })
+    });
+  } catch (e) {
+    if (signal?.aborted) throw e;
+    throw new DashboardError(`${name}: the dashboard could not be reached`);
+  }
+  if (!response.ok) throw new DashboardError(`${name}: the dashboard said ${response.status}`);
+  let body;
+  try {
+    body = await response.json() ?? {};
+  } catch {
+    throw new DashboardError(`${name}: the dashboard gave an answer that is not JSON`);
+  }
+  if (body.error) throw new DashboardError(`${name}: ${body.error.message ?? "refused"}`);
+  const result = body.result ?? {};
+  let data = result.structuredContent;
+  if (!data) {
+    try {
+      data = JSON.parse(result.content?.[0]?.text ?? "{}");
+    } catch {
+      data = {};
+    }
+  }
+  if (result.isError) throw new DashboardError(`${name}: ${typeof data?.message === "string" ? data.message : "refused"}`);
+  return data ?? {};
+}
+function answeredByHuman(r) {
+  if (r.state !== "answered" || !r.response) return false;
+  if (typeof r.author === "string" && r.author !== "human") return false;
+  if (r.answered_by && typeof r.answered_by.user_id === "string" && r.answered_by.user_id.startsWith("agent")) return false;
+  return true;
+}
+var defaultSleep = (ms, signal) => new Promise((done) => {
+  if (signal?.aborted) return done();
+  const timer = setTimeout(done, ms);
+  signal?.addEventListener("abort", () => (clearTimeout(timer), done()), { once: true });
+});
+async function ask(d, asks, options, io = {}) {
+  const now = io.now ?? Date.now;
+  const sleep = io.sleep ?? defaultSleep;
+  const waitMs = options.waitMs ?? WAIT_MS;
+  const started = now();
+  const graceEnds = started + (options.graceMs ?? GRACE_MS);
+  while (now() < graceEnds) {
+    if (options.decided()) return null;
+    await sleep(Math.min(WATCH_MS, graceEnds - now()));
+  }
+  if (options.decided()) return null;
+  const deadline = now() + waitMs;
+  const timeout_s = Math.max(5, Math.min(86400, Math.ceil(waitMs / 1e3)));
+  const open = asks.map(() => null);
+  const results = [];
+  const controller = new AbortController();
+  const takeDown = async () => {
+    controller.abort();
+    for (const id of open) {
+      if (!id) continue;
+      try {
+        await callTool(d, "withdraw_request", { request_id: id }, io);
+      } catch {
+      }
+    }
+  };
+  try {
+    for (const a of asks) {
+      const args = { kind: a.kind, question: a.question, detail: a.detail, options: a.options, timeout_s, priority: "high" };
+      if (a.min !== void 0) args.min = a.min;
+      if (options.channel) args.channel = options.channel;
+      const r = await callTool(d, "request_input", args, io);
+      results.push(r);
+      if (r.state === "pending" && typeof r.request_id === "string") open[results.length - 1] = r.request_id;
+      else if (!answeredByHuman(r)) {
+        await takeDown();
+        return null;
+      }
+    }
+  } catch (e) {
+    io.log?.(e instanceof Error ? e.message : "request_input failed");
+    await takeDown();
+    return null;
+  }
+  const waits = results.map(async (first2, i) => {
+    let r = first2;
+    while (r.state === "pending" && !controller.signal.aborted) {
+      const asked = now();
+      try {
+        r = await callTool(d, "await_request", { request_id: open[i] }, io, controller.signal);
+      } catch (e) {
+        if (controller.signal.aborted) return r;
+        io.log?.(e instanceof Error ? e.message : "await_request failed");
+        await sleep(5e3, controller.signal);
+        continue;
+      }
+      if (r.state === "pending" && now() - asked < 2e3) await sleep(Math.min(Math.max(r.poll_after_ms ?? 1e3, 500), 1e4), controller.signal);
+    }
+    if (r.state !== "pending") open[i] = null;
+    results[i] = r;
+    if (!answeredByHuman(r)) controller.abort();
+    return r;
+  });
+  const watcher = (async () => {
+    while (!controller.signal.aborted) {
+      if (options.decided() || now() >= deadline) return "stop";
+      await sleep(WATCH_MS, controller.signal);
+    }
+    return "done";
+  })();
+  const first = await Promise.race([Promise.all(waits).then(() => "answered"), watcher]);
+  if (first === "stop" || !results.every(answeredByHuman)) {
+    await takeDown();
+    await Promise.allSettled(waits);
+    return null;
+  }
+  controller.abort();
+  const by = results.map((r) => typeof r.answered_by?.name === "string" ? r.answered_by.name : null).find((n) => n) ?? null;
+  return { values: results.map((r) => r.response.value), by };
+}
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value).filter(([, v]) => v !== void 0).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+var TAIL_BYTES = 4 * 1024 * 1024;
+var Tail = class {
+  constructor(path, offset = null) {
+    this.path = path;
+    this.offset = offset;
+  }
+  path;
+  offset;
+  partial = "";
+  get position() {
+    return this.offset ?? 0;
+  }
+  /** The entries written since the last call. The first call starts near the end. */
+  read() {
+    let size;
+    try {
+      size = statSync(this.path).size;
+    } catch {
+      return [];
+    }
+    let skipFirst = false;
+    if (this.offset === null || this.offset > size) {
+      this.offset = Math.max(0, size - TAIL_BYTES);
+      skipFirst = this.offset > 0;
+      this.partial = "";
+    }
+    if (size === this.offset) return [];
+    const fd = openSync2(this.path, "r");
+    let text;
+    try {
+      const buffer = Buffer.alloc(size - this.offset);
+      readSync(fd, buffer, 0, buffer.length, this.offset);
+      text = this.partial + buffer.toString("utf8");
+    } finally {
+      closeSync2(fd);
+    }
+    this.offset = size;
+    const lines = text.split("\n");
+    this.partial = lines.pop() ?? "";
+    if (skipFirst) lines.shift();
+    const out = [];
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        out.push(JSON.parse(line));
+      } catch {
+      }
+    }
+    return out;
+  }
+};
+function blocks(entry) {
+  const content = entry.message?.content;
+  return Array.isArray(content) ? content : [];
+}
+function transcriptsFor(input) {
+  const paths = /* @__PURE__ */ new Set();
+  if (input.agent_transcript_path) paths.add(input.agent_transcript_path);
+  if (input.transcript_path) {
+    paths.add(input.transcript_path);
+    const sub = join4(input.transcript_path.replace(/\.jsonl$/, ""), "subagents");
+    try {
+      for (const f of readdirSync(sub)) if (f.endsWith(".jsonl")) paths.add(join4(sub, f));
+    } catch {
+    }
+  }
+  return [...paths];
+}
+var Decided = class {
+  constructor(input, list = () => transcriptsFor(input)) {
+    this.input = input;
+    this.list = list;
+    this.want = `${input.tool_name}\0${canonical(input.tool_input ?? {})}`;
+  }
+  input;
+  list;
+  tails = /* @__PURE__ */ new Map();
+  candidates = [];
+  resolved = /* @__PURE__ */ new Set();
+  target = null;
+  checked = false;
+  want;
+  check() {
+    const late = [];
+    for (const path of this.list()) {
+      let tail = this.tails.get(path);
+      if (!tail) this.tails.set(path, tail = new Tail(path));
+      for (const entry of tail.read()) {
+        for (const b of blocks(entry)) {
+          if (b.type === "tool_use" && b.id && `${b.name}\0${canonical(b.input ?? {})}` === this.want) {
+            this.candidates.push(b.id);
+            if (this.checked) late.push(b.id);
+          }
+          if (b.type === "tool_result" && b.tool_use_id) this.resolved.add(b.tool_use_id);
+        }
+      }
+    }
+    this.checked = true;
+    if (!this.target) this.target = [...this.candidates].reverse().find((id) => !this.resolved.has(id)) ?? null;
+    if (!this.target && late.some((id) => this.resolved.has(id))) return true;
+    return this.target !== null && this.resolved.has(this.target);
+  }
+};
+function home(path) {
+  if (!path) return "?";
+  const h = homedir();
+  return h && (path === h || path.startsWith(`${h}/`)) ? `~${path.slice(h.length)}` : path;
+}
+function who(d, cwd) {
+  if (d.agent) return `"${d.agent}"`;
+  const folder = cwd ? basename2(cwd) : "";
+  return folder ? `The agent in ${folder}` : "Your agent";
+}
+function cut(text, max) {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}\u2026`;
+}
+var decision = (d) => ({ hookSpecificOutput: { hookEventName: "PermissionRequest", decision: d } });
+function alwaysRules(suggestions) {
+  return (suggestions ?? []).filter((s) => s?.type === "addRules" && s.behavior === "allow" && Array.isArray(s.rules) && s.rules.length > 0);
+}
+function ruleText(s) {
+  return (s.rules ?? []).map((r) => r.ruleContent ? `${r.toolName}(${redact(r.ruleContent)})` : `${r.toolName}`).join(", ");
+}
+var ALLOW = "Allow";
+var ALWAYS = "Always allow";
+var DENY = "Deny";
+var ANSWER_NOTE = (waitMs) => `Answer here or at the terminal: the first answer counts. With no answer in ${Math.round(waitMs / 6e4)} minutes it stays at the terminal; it is never allowed on its own.`;
+async function permissionPrompt(input, d, options, io = {}) {
+  const tool2 = input.tool_name;
+  if (!tool2) return null;
+  const watch2 = new Decided(input);
+  const decided = options.decided ?? (() => watch2.check());
+  if (tool2 === "AskUserQuestion") return questionPrompt(input, d, { ...options, decided }, io);
+  if (tool2 === "ExitPlanMode") return null;
+  const { action, subject } = describeCall(tool2, input.tool_input);
+  const rules = alwaysRules(input.permission_suggestions);
+  const waitMs = options.waitMs ?? WAIT_MS;
+  const detail = [
+    ...d.agent ? [`Agent: ${d.agent}`] : [],
+    `Folder: ${home(input.cwd)}`,
+    `Tool: ${tool2}`,
+    subject,
+    ...rules.length ? [`"${ALWAYS}" adds: ${truncate(rules.map(ruleText).join("; "), 500)}`] : [],
+    "",
+    ANSWER_NOTE(waitMs)
+  ].join("\n");
+  const answer = await ask(
+    d,
+    [
+      {
+        kind: "buttons",
+        question: truncate(`${who(d, input.cwd)} wants to ${action}: ${subject}`, 500),
+        detail,
+        options: rules.length ? [ALLOW, ALWAYS, DENY] : [ALLOW, DENY]
+      }
+    ],
+    { ...options, decided },
+    io
+  );
+  if (!answer) return null;
+  const [value] = answer.values;
+  if (value === ALLOW) return decision({ behavior: "allow" });
+  if (value === ALWAYS && rules.length) return decision({ behavior: "allow", updatedPermissions: rules });
+  if (value === DENY) {
+    const by = answer.by ? ` (${answer.by})` : "";
+    return decision({ behavior: "deny", message: `${DENIED_ON_DASHBOARD}${by} Do not try it another way; ask them if you need it.` });
+  }
+  return null;
+}
+async function questionPrompt(input, d, options, io) {
+  const questions = input.tool_input?.questions ?? [];
+  if (!Array.isArray(questions) || questions.length === 0) return null;
+  const waitMs = options.waitMs ?? WAIT_MS;
+  const asks = [];
+  const labels = [];
+  for (const q of questions) {
+    if (typeof q?.question !== "string" || !Array.isArray(q.options) || q.options.length === 0 || q.options.length > 25) return null;
+    const original = q.options.map((o) => typeof o?.label === "string" ? o.label : "");
+    const shown = original.map((l) => truncate(redact(l), 200));
+    if (original.some((l) => !l) || new Set(shown).size !== shown.length) return null;
+    labels.push(original);
+    const lines = q.options.map((o, i) => `\u2022 ${shown[i]}${typeof o.description === "string" && o.description ? ` \u2014 ${truncate(redact(o.description), 300)}` : ""}`);
+    asks.push({
+      kind: q.multiSelect === true ? "multi_choice" : "choice",
+      question: truncate(`${who(d, input.cwd)} asks: ${redact(q.question)}`, 500),
+      detail: cut([`Folder: ${home(input.cwd)}`, ...lines, "", ANSWER_NOTE(waitMs), "To answer in your own words, use the terminal."].join("\n"), 4e3),
+      options: shown,
+      ...q.multiSelect === true ? { min: 1 } : {}
+    });
+  }
+  const answer = await ask(d, asks, options, io);
+  if (!answer) return null;
+  const answers = {};
+  for (const [i, q] of questions.entries()) {
+    const value = answer.values[i];
+    const pick = (shownLabel) => {
+      const at = asks[i].options.indexOf(String(shownLabel));
+      return at >= 0 ? labels[i][at] : null;
+    };
+    const picked = Array.isArray(value) ? value.map(pick) : [pick(value)];
+    if (picked.length === 0 || picked.some((p) => p === null)) return null;
+    answers[q.question] = picked.join(", ");
+  }
+  return decision({ behavior: "allow", updatedInput: { ...input.tool_input, answers } });
+}
+function refusalReason(content, toolUseResult) {
+  const text = typeof content === "string" ? content : Array.isArray(content) ? content.map((c) => typeof c?.text === "string" ? c.text : "").join(" ") : "";
+  if (text.startsWith(DENIED_ON_DASHBOARD)) return "refused on the dashboard";
+  if (toolUseResult === "User rejected tool use" || /^The user doesn't want to (?:proceed with this tool use|take this action)/.test(text)) return "refused at the terminal";
+  if (/^Permission to use .+ has been denied/.test(text)) return "blocked by a permission rule";
+  const hook = /^(\w+)(?::\S*)? hook error: ([\s\S]*)/.exec(text);
+  if (hook && (hook[1] === "PreToolUse" || hook[1] === "PermissionRequest")) return `blocked by a hook: ${truncate(redact(hook[2]), 160)}`;
+  return null;
+}
+function refusalText(tool2, input, why) {
+  if (!tool2) return { key: `?\0${why}`, text: `a tool call \u2014 ${why}` };
+  const { action, subject } = describeCall(tool2, input);
+  const shown = subject ? `${action}: \`${subject.replace(/`/g, "'")}\`` : action;
+  return { key: `${tool2}\0${subject}\0${why}`, text: `${shown} \u2014 ${why}` };
+}
+function refusalsIn(entries, known = /* @__PURE__ */ new Map(), since = 0) {
+  const out = [];
+  for (const entry of entries) {
+    const at = entry.timestamp ? Date.parse(entry.timestamp) : NaN;
+    for (const b of blocks(entry)) {
+      if (b.type === "tool_use" && b.id) known.set(b.id, { name: b.name, input: b.input });
+      if (b.type !== "tool_result" || !b.tool_use_id) continue;
+      if (!Number.isNaN(at) && at < since) continue;
+      const why = refusalReason(b.content, entry.toolUseResult);
+      if (!why) continue;
+      const call = known.get(b.tool_use_id);
+      out.push({ id: b.tool_use_id, ...refusalText(call?.name, call?.input, why) });
+    }
+  }
+  return out;
+}
+function statePath(data, sessionId) {
+  return join4(data, "refusals", `${sessionId.replace(/[^A-Za-z0-9_-]/g, "_")}.json`);
+}
+function readState(path) {
+  try {
+    const s = JSON.parse(readFileSync4(path, "utf8"));
+    return { offsets: s.offsets ?? {}, seen: Array.isArray(s.seen) ? s.seen : [], card: s.card ?? null, channel: s.channel };
+  } catch {
+    return { offsets: {}, seen: [], card: null };
+  }
+}
+function writeState(path, state, now) {
+  mkdirSync3(dirname3(path), { recursive: true, mode: 448 });
+  writeFileSync4(path, JSON.stringify(state), { mode: 384 });
+  try {
+    for (const f of readdirSync(dirname3(path))) {
+      const p = join4(dirname3(path), f);
+      if (now - statSync(p).mtimeMs > 7 * 24 * 36e5) rmSync3(p, { force: true });
+    }
+  } catch {
+  }
+}
+async function pickChannel(d, io) {
+  const subs = await callTool(d, "list_subscriptions", {}, io);
+  const channels = Array.isArray(subs.channels) ? subs.channels : [];
+  const pick = channels.find((c) => c.via === "posted") ?? channels.find((c) => c.via === "chosen") ?? channels[0];
+  const name = pick?.slug ?? pick?.id;
+  return typeof name === "string" ? name : null;
+}
+function cardBody(d, cwd, card) {
+  const total = card.lines.reduce((n, l) => n + l.count, 0) + card.more;
+  const lines = card.lines.map((l) => `- ${l.text}${l.count > 1 ? ` (\xD7${l.count})` : ""}`);
+  if (card.more) lines.push(`- \u2026and ${card.more} more`);
+  return {
+    title: `Refused: ${total} tool call${total === 1 ? "" : "s"}`,
+    body: [`${d.agent ? `**${d.agent}**` : "This agent"} in \`${home(cwd)}\`:`, "", ...lines].join("\n")
+  };
+}
+async function reportRefusals(input, d, data, io = {}) {
+  const now = (io.now ?? Date.now)();
+  const session = input.session_id || "unknown";
+  const path = statePath(data, session);
+  const state = readState(path);
+  const found = [];
+  if (input.hook_event_name === "PermissionDenied") {
+    const why = `blocked by auto mode${input.reason ? `: ${truncate(redact(input.reason), 160)}` : ""}`;
+    found.push({ id: input.tool_use_id ?? `denied-${now}`, ...refusalText(input.tool_name, input.tool_input, why) });
+  } else {
+    const paths = input.hook_event_name === "SubagentStop" && input.agent_transcript_path ? [input.agent_transcript_path] : input.transcript_path ? [input.transcript_path] : [];
+    for (const p of paths) {
+      if (!existsSync2(p)) continue;
+      const first = state.offsets[p] === void 0;
+      const tail = new Tail(p, state.offsets[p] ?? null);
+      found.push(...refusalsIn(tail.read(), void 0, first ? now - CARD_FOR_MS : 0));
+      state.offsets[p] = tail.position;
+    }
+  }
+  const seen = new Set(state.seen);
+  const fresh = found.filter((r) => !seen.has(r.id));
+  for (const r of fresh) seen.add(r.id);
+  state.seen = [...seen].slice(-300);
+  if (fresh.length === 0) {
+    writeState(path, state, now);
+    return 0;
+  }
+  const add = (base) => {
+    const next2 = base ? { ...base, lines: base.lines.map((l) => ({ ...l })) } : { update_id: "", posted_at: now, lines: [], more: 0 };
+    for (const r of fresh) {
+      const line = next2.lines.find((l) => l.key === r.key);
+      if (line) line.count += 1;
+      else if (next2.lines.length < CARD_LINES) next2.lines.push({ key: r.key, text: r.text, count: 1 });
+      else next2.more += 1;
+    }
+    return next2;
+  };
+  const open = state.card && now - state.card.posted_at < CARD_FOR_MS ? state.card : null;
+  if (open) {
+    const next2 = add(open);
+    try {
+      await callTool(d, "edit_update", { update_id: open.update_id, ...cardBody(d, input.cwd, next2) }, io);
+      state.card = next2;
+      writeState(path, state, now);
+      return fresh.length;
+    } catch {
+    }
+  }
+  if (!state.channel) state.channel = await pickChannel(d, io);
+  if (!state.channel) {
+    io.log?.("refused: this agent follows no channel yet, so there is nowhere to post");
+    writeState(path, state, now);
+    return 0;
+  }
+  const next = add(null);
+  const posted = await callTool(d, "post_update", { channel: state.channel, ...cardBody(d, input.cwd, next), level: "warn", priority: "low" }, io);
+  const id = posted.update?.id;
+  state.card = typeof id === "string" ? { ...next, update_id: id } : null;
+  writeState(path, state, now);
+  return fresh.length;
+}
+
 // src/cli.ts
 function settingsFrom(env) {
   const pick = (option, fallback) => env[`CLAUDE_PLUGIN_OPTION_${option}`]?.trim() || env[fallback]?.trim() || "";
@@ -1047,7 +1620,7 @@ function settingsFrom(env) {
 }
 function readSettings(store) {
   try {
-    const parsed = JSON.parse(readFileSync4(store.connectionPath, "utf8"));
+    const parsed = JSON.parse(readFileSync5(store.connectionPath, "utf8"));
     return {
       url: typeof parsed.url === "string" ? parsed.url : null,
       monitor: parsed.monitor === "off" ? "off" : "auto"
@@ -1072,9 +1645,9 @@ function sessionStart(store, env) {
       "wildware-feed:connecting-to-the-feed skill. It pairs this project with their approval."
     ].join("\n");
   }
-  const who = token.name ? ` as "${token.name}"` : "";
+  const who2 = token.name ? ` as "${token.name}"` : "";
   return [
-    `Wildware Feed: your owner may be watching this run at ${settings.url}${who}.`,
+    `Wildware Feed: your owner may be watching this run at ${settings.url}${who2}.`,
     "register_session first and heartbeat on the interval it returns; end_session when done.",
     "Acknowledge every owner message (read, then thinking, then done) and reply in its thread",
     "with post_message. Ask with request_input instead of guessing; a timeout is not a yes.",
@@ -1093,6 +1666,24 @@ function connection(store, env) {
   const token = store.resolve(env, url);
   if (!token) return null;
   return { url, token: token.token, monitor: monitor2 };
+}
+function promptTarget(store, env) {
+  if (!promptsOn(env)) return null;
+  const url = settingsFrom(env).url || env.AGENT_DASHBOARD_URL?.trim() || readSettings(store)?.url;
+  if (!url) return null;
+  const token = store.resolve(env, url);
+  if (!token) return null;
+  return { url, token: token.token, agent: token.name };
+}
+async function hookInput() {
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  try {
+    const parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    return typeof parsed === "object" && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 function sameConnection(a, b) {
   return a.url === b.url && a.token === b.token;
@@ -1187,15 +1778,15 @@ async function monitor(store, env) {
 }
 function dataDirFor(script) {
   if (!script) return null;
-  const bin = dirname3(resolve3(script));
-  const version = dirname3(bin);
-  const plugin = dirname3(version);
-  const marketplace = dirname3(plugin);
-  const cache = dirname3(marketplace);
-  const plugins = dirname3(cache);
-  if (basename2(bin) !== "bin" || basename2(cache) !== "cache" || basename2(plugins) !== "plugins") return null;
-  const id = `${basename2(plugin)}-${basename2(marketplace)}`.replace(/[^a-zA-Z0-9_-]/g, "-");
-  return join4(plugins, "data", id);
+  const bin = dirname4(resolve3(script));
+  const version = dirname4(bin);
+  const plugin = dirname4(version);
+  const marketplace = dirname4(plugin);
+  const cache = dirname4(marketplace);
+  const plugins = dirname4(cache);
+  if (basename3(bin) !== "bin" || basename3(cache) !== "cache" || basename3(plugins) !== "plugins") return null;
+  const id = `${basename3(plugin)}-${basename3(marketplace)}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+  return join5(plugins, "data", id);
 }
 async function run(argv, env = process.env, script = process.argv[1]) {
   const { values, positionals } = parseArgs({
@@ -1263,6 +1854,33 @@ async function run(argv, env = process.env, script = process.argv[1]) {
       say("Usage: pair start --url <dashboard> --name <agent name> [--new-dashboard <host>] | pair wait");
       return 2;
     }
+    case "prompt": {
+      const input = await hookInput();
+      const target = promptTarget(store, env);
+      if (!target) return 0;
+      const log = (line) => process.stderr.write(`wildware-feed prompt: ${line}
+`);
+      try {
+        const out = await permissionPrompt(input, target, {}, { log });
+        if (out) say(JSON.stringify(out));
+      } catch (e) {
+        log(e instanceof Error ? e.message : "failed");
+      }
+      return 0;
+    }
+    case "refused": {
+      const input = await hookInput();
+      const target = promptTarget(store, env);
+      if (!target) return 0;
+      const log = (line) => process.stderr.write(`wildware-feed refused: ${line}
+`);
+      try {
+        await reportRefusals(input, target, store.data, { log });
+      } catch (e) {
+        log(e instanceof Error ? e.message : "failed");
+      }
+      return 0;
+    }
     case "secret": {
       const name = positionals[2];
       const usage = "Usage: secret get <NAME> --to <file> | secret get <NAME> --env-file <file> [--as VAR] | secret put <NAME> --from <file> [--note <text>]";
@@ -1293,7 +1911,7 @@ async function run(argv, env = process.env, script = process.argv[1]) {
       }
     }
     default:
-      say("Usage: feed.mjs <headers|session-start|monitor|status|forget|pair start|pair wait|secret get|secret put> --data <dir> [--project <dir>]");
+      say("Usage: feed.mjs <headers|session-start|monitor|status|forget|pair start|pair wait|secret get|secret put|prompt|refused> --data <dir> [--project <dir>]");
       return 2;
   }
 }
