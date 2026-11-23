@@ -56,6 +56,26 @@ describe('which token a session uses', () => {
 		expect(store.resolve({ AGENT_DASHBOARD_TOKEN: ' env-token ' })).toMatchObject({ token: 'env-token', source: 'env' });
 	});
 
+	it('sends the option token only to the dashboard it was set for', () => {
+		const store = Store.for(temp(), temp(), noGit);
+		store.saveOptionToken('option-token', 'https://feed.example.com');
+		expect(store.resolve({}, 'https://feed.example.com/mcp')).toMatchObject({ token: 'option-token' });
+		// The dashboard URL changed and the token didn't: it stays bound to the first.
+		store.saveOptionToken('option-token', 'https://elsewhere.example');
+		expect(store.resolve({}, 'https://elsewhere.example/mcp')).toBeNull();
+		expect(store.resolve({}, 'https://feed.example.com/mcp')).toMatchObject({ token: 'option-token' });
+		// A new token, entered for the new dashboard, goes there.
+		store.saveOptionToken('new-token', 'https://elsewhere.example');
+		expect(store.resolve({}, 'https://elsewhere.example/mcp')).toMatchObject({ token: 'new-token' });
+	});
+
+	it('sends no token over plain http to the internet', () => {
+		const store = Store.for(temp(), temp(), noGit);
+		store.saveOptionToken('option-token', 'http://feed.example.com');
+		expect(store.resolve({ AGENT_DASHBOARD_TOKEN: 'env-token' }, 'http://feed.example.com/mcp')).toBeNull();
+		expect(store.resolve({ AGENT_DASHBOARD_TOKEN: 'env-token' }, 'http://127.0.0.1:8010/mcp')).toMatchObject({ token: 'env-token' });
+	});
+
 	it('keeps one project’s token away from another project', () => {
 		const data = temp();
 		Store.for(data, '/one', noGit).savePaired(paired());

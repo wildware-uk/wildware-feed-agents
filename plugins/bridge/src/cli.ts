@@ -67,7 +67,7 @@ export function sessionStart(store: Store, env: NodeJS.ProcessEnv): string {
 	const settings = settingsFrom(env);
 	try {
 		writeSecret(store.connectionPath, settings);
-		store.saveOptionToken(env.CLAUDE_PLUGIN_OPTION_AGENT_TOKEN);
+		store.saveOptionToken(env.CLAUDE_PLUGIN_OPTION_AGENT_TOKEN, settings.url);
 	} catch {
 		// A read-only data folder costs the monitor, not the session.
 	}
@@ -332,7 +332,7 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env, 
 			const { url, token } = target;
 			try {
 				if (sub === 'get') {
-					say(await getSecret({ url, token: token.token, name, to: values.to, envFile: values['env-file'], as: values.as }));
+					say(await getSecret({ url, token: token.token, name, to: values.to, envFile: values['env-file'], as: values.as, force: values.force }));
 				} else {
 					if (!values.from) {
 						say(usage);

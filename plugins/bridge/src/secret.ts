@@ -38,7 +38,7 @@ export function committable(path: string): boolean {
 	return !git(['check-ignore', '-q', '--', resolve(path)]);
 }
 
-export type GetOptions = { url: string; token: string; name: string; to?: string; envFile?: string; as?: string };
+export type GetOptions = { url: string; token: string; name: string; to?: string; envFile?: string; as?: string; force?: boolean };
 export type PutOptions = { url: string; token: string; name: string; from: string; note?: string };
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -88,6 +88,8 @@ async function tool(url: string, token: string, name: string, args: Record<strin
 	if (/[\r\n\0]/.test(token)) throw new SecretError("this project's token holds a line break: pair again, or check AGENT_DASHBOARD_TOKEN");
 	const response = await quietFetch(io, 'the dashboard could not be reached', `${origin(url)}/mcp`, {
 		method: 'POST',
+		// The token never follows a redirect.
+		redirect: 'error',
 		headers: {
 			Authorization: `Bearer ${token}`,
 			Accept: 'application/json, text/event-stream',
@@ -195,6 +197,10 @@ export async function getSecret(options: GetOptions, io: SecretIo = {}): Promise
 	if (envFile && !ENV_NAME.test(variable)) throw new SecretError(`${variable} is not an environment variable name: pass --as NAME`);
 	// Before the link is asked for, so a refusal does not spend it.
 	const target = (to ?? envFile)!;
+	// --to writes a whole file: one already there is someone's, and is kept unless told otherwise.
+	if (to && !options.force && existsSync(to)) {
+		throw new SecretError(`${to} already exists: pass --force to replace it, or choose another file`);
+	}
 	if ((io.committable ?? committable)(target)) {
 		throw new SecretError(`${target} is in a git work tree and not ignored, so it could be committed: add it to .gitignore first, or write it outside the repo`);
 	}

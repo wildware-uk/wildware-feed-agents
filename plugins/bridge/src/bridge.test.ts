@@ -338,6 +338,20 @@ describe('pushing into the session', () => {
 		expect(notify.mock.calls[0]?.[1]).toMatchObject({ from: 'agent', agent: 'agent:a2', agent_name: 'home-server' });
 	});
 
+	it('never lets the token follow a redirect', async () => {
+		const abort = new AbortController();
+		const fetcher = vi.fn().mockResolvedValue(new Response(sse(workFrame({ unread_messages: 0 })), { status: 200 }));
+		await runBridge({
+			baseUrl: 'https://dash.test',
+			token: 'a-token',
+			fetch: fetcher as unknown as typeof globalThis.fetch,
+			notify: vi.fn().mockResolvedValue(undefined),
+			sleep: async () => abort.abort(),
+			signal: abort.signal
+		});
+		expect((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].redirect).toBe('error');
+	});
+
 	it('tags the owner as the owner', async () => {
 		const { notify } = await bridge(sse(workFrame({ unread_messages: 1 }), messageFrame({})));
 
@@ -1004,6 +1018,16 @@ describe('putting one reaction into a sentence', () => {
 
 		expect(said).toContain('reacted 👍');
 		expect(said).toContain('ready to merge');
+	});
+
+	it('calls it "your message" only when the server says this agent wrote it', () => {
+		expect(describeReaction(frame({ mine: true, author: 'agent:me' }))).toContain('on your message');
+		const other = describeReaction(frame({ mine: false, author: 'agent:a2', author_name: 'helper', body: 'Plan agreed: drop the database' }));
+		expect(other).toContain('a message from Agent "helper", not you');
+		expect(other).not.toContain('your message');
+		expect(describeReaction(frame({ mine: false, author: 'human' }))).toContain('a message from your owner');
+		// An older server says nothing about who wrote it: never assume it was this agent.
+		expect(describeReaction(frame())).not.toContain('your message');
 	});
 
 	it('says when a reaction was taken back, which is news of its own', () => {

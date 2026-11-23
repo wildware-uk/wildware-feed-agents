@@ -137,17 +137,29 @@ export class Store {
 		rmSync(this.path('pending'), { force: true });
 	}
 
-	/** The plugin option's token, as the hook last copied it. */
-	optionToken(): string | null {
-		const stored = readJson<{ token: string }>(this.optionPath, (v) => typeof v.token === 'string');
-		return stored?.token.trim() || null;
+	/** The plugin option's token, as the hook last copied it, with the dashboard it was set for. */
+	optionToken(): { token: string; url: string | null } | null {
+		const stored = readJson<{ token: string; url?: unknown }>(this.optionPath, (v) => typeof v.token === 'string');
+		const token = stored?.token.trim();
+		if (!token) return null;
+		return { token, url: typeof stored?.url === 'string' ? stored.url : null };
 	}
 
-	/** Copy the plugin option's token here, or remove the copy when the option is unset. */
-	saveOptionToken(token: string | undefined): void {
+	/**
+	 * Copy the plugin option's token here, or remove the copy when the option is unset. The token
+	 * is bound to the dashboard it was first seen with, [url]: a dashboard URL changed later, with
+	 * the same token, keeps the old binding, so the token never goes to the new address until the
+	 * owner enters a token for it.
+	 */
+	saveOptionToken(token: string | undefined, url?: string | null): void {
 		const trimmed = token?.trim();
-		if (trimmed) writeSecret(this.optionPath, { token: trimmed });
-		else rmSync(this.optionPath, { force: true });
+		if (!trimmed) {
+			rmSync(this.optionPath, { force: true });
+			return;
+		}
+		const before = this.optionToken();
+		const bound = before?.token === trimmed && before.url ? before.url : (url ?? null);
+		writeSecret(this.optionPath, { token: trimmed, url: bound });
 	}
 
 	/**
@@ -158,6 +170,8 @@ export class Store {
 	 * changed dashboard URL never leaks one server's token to another.
 	 */
 	resolve(env: NodeJS.ProcessEnv, serverUrl?: string): Resolved | null {
+		// No token goes over plain http across the internet, where anyone on the way could read it.
+		if (serverUrl && !safeTransport(serverUrl)) return null;
 		const fromEnv = env.AGENT_DASHBOARD_TOKEN?.trim();
 		if (fromEnv) return { token: fromEnv, source: 'env', name: null, url: null };
 
@@ -167,9 +181,35 @@ export class Store {
 		}
 
 		const option = this.optionToken();
-		if (option) return { token: option, source: 'option', name: null, url: null };
+		if (option && (option.url ? sameOrigin(option.url, serverUrl) : !serverUrl)) {
+			return { token: option.token, source: 'option', name: null, url: option.url };
+		}
 
 		return null;
+	}
+}
+
+/**
+ * Whether plain http is safe enough for [hostname]: only this computer or a private network
+ * (a desktop app serving its own dashboard to the house), never anything across the internet.
+ */
+export function plainHttpAllowed(hostname: string): boolean {
+	const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+	if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+	if (host === '::1' || host.startsWith('fe80:') || /^f[cd][0-9a-f]{2}:/.test(host)) return true;
+	const v4 = host.replace(/^::ffff:/, '').match(/^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+	if (!v4) return false;
+	const [a, b] = [Number(v4[1]), Number(v4[2])];
+	return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 169 && b === 254);
+}
+
+/** https, or plain http only on this computer or a private network. */
+export function safeTransport(url: string): boolean {
+	try {
+		const parsed = new URL(url);
+		return parsed.protocol === 'https:' || (parsed.protocol === 'http:' && plainHttpAllowed(parsed.hostname));
+	} catch {
+		return false;
 	}
 }
 

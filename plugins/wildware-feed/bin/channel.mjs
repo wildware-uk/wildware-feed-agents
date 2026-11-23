@@ -17189,10 +17189,11 @@ function describeAttachments(media) {
   return ` [${list} attached \u2014 call get_messages to see ${media.length === 1 ? "it" : "them"}]`;
 }
 function describeReaction(frame) {
-  const about = frame.body.trim();
+  const about = slot(frame.body, 160);
   const where = place(frame);
   const verb = frame.on ? "reacted" : "removed their reaction";
-  return `Your owner ${verb} ${frame.emoji} on your message (${where}): ${about}`;
+  const whose = frame.mine === true ? "your message" : frame.author === "human" ? "a message from your owner" : frame.author_name ? `a message from Agent ${slot(frame.author_name, 60)}, not you` : frame.mine === false ? "a message from another agent, not you" : "a message in your thread";
+  return `Your owner ${verb} ${tagValue(frame.emoji, 16)} on ${whose} (${where}): ${about}`;
 }
 function describeBlock(frame) {
   const who = frame.by?.name ?? "Your owner";
@@ -17417,6 +17418,8 @@ async function runBridge(options) {
     try {
       const response = await fetcher(url, {
         headers: { authorization: `Bearer ${token}`, accept: "text/event-stream" },
+        // The token never follows a redirect: wherever it points, it isn't the dashboard asked.
+        redirect: "error",
         signal
       });
       if (!response.ok || !response.body) {
@@ -17680,16 +17683,28 @@ var Store = class _Store {
   clearPending() {
     rmSync(this.path("pending"), { force: true });
   }
-  /** The plugin option's token, as the hook last copied it. */
+  /** The plugin option's token, as the hook last copied it, with the dashboard it was set for. */
   optionToken() {
     const stored = readJson(this.optionPath, (v) => typeof v.token === "string");
-    return stored?.token.trim() || null;
+    const token = stored?.token.trim();
+    if (!token) return null;
+    return { token, url: typeof stored?.url === "string" ? stored.url : null };
   }
-  /** Copy the plugin option's token here, or remove the copy when the option is unset. */
-  saveOptionToken(token) {
+  /**
+   * Copy the plugin option's token here, or remove the copy when the option is unset. The token
+   * is bound to the dashboard it was first seen with, [url]: a dashboard URL changed later, with
+   * the same token, keeps the old binding, so the token never goes to the new address until the
+   * owner enters a token for it.
+   */
+  saveOptionToken(token, url) {
     const trimmed = token?.trim();
-    if (trimmed) writeSecret(this.optionPath, { token: trimmed });
-    else rmSync(this.optionPath, { force: true });
+    if (!trimmed) {
+      rmSync(this.optionPath, { force: true });
+      return;
+    }
+    const before = this.optionToken();
+    const bound = before?.token === trimmed && before.url ? before.url : url ?? null;
+    writeSecret(this.optionPath, { token: trimmed, url: bound });
   }
   /**
    * The token this session should use, or null when there is none.
@@ -17699,6 +17714,7 @@ var Store = class _Store {
    * changed dashboard URL never leaks one server's token to another.
    */
   resolve(env2, serverUrl) {
+    if (serverUrl && !safeTransport(serverUrl)) return null;
     const fromEnv = env2.AGENT_DASHBOARD_TOKEN?.trim();
     if (fromEnv) return { token: fromEnv, source: "env", name: null, url: null };
     const paired = this.paired();
@@ -17706,10 +17722,29 @@ var Store = class _Store {
       return { token: paired.token, source: "paired", name: paired.name, url: paired.url };
     }
     const option = this.optionToken();
-    if (option) return { token: option, source: "option", name: null, url: null };
+    if (option && (option.url ? sameOrigin(option.url, serverUrl) : !serverUrl)) {
+      return { token: option.token, source: "option", name: null, url: option.url };
+    }
     return null;
   }
 };
+function plainHttpAllowed(hostname) {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
+  if (host === "::1" || host.startsWith("fe80:") || /^f[cd][0-9a-f]{2}:/.test(host)) return true;
+  const v4 = host.replace(/^::ffff:/, "").match(/^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+  if (!v4) return false;
+  const [a, b] = [Number(v4[1]), Number(v4[2])];
+  return a === 127 || a === 10 || a === 192 && b === 168 || a === 172 && b >= 16 && b <= 31 || a === 169 && b === 254;
+}
+function safeTransport(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" && plainHttpAllowed(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
 function sameOrigin(a, b) {
   if (!b) return true;
   try {

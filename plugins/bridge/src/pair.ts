@@ -11,7 +11,9 @@
  * the transcript never holds the secret.
  */
 import { hostname } from 'node:os';
-import { sameOrigin, type Store } from './store';
+import { plainHttpAllowed, sameOrigin, type Store } from './store';
+
+export { plainHttpAllowed };
 
 export type PairIo = {
 	fetch?: typeof globalThis.fetch;
@@ -32,20 +34,6 @@ export function origin(url: string): string {
 	const parsed = new URL(url.trim());
 	if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error(`not an http(s) URL: ${url}`);
 	return parsed.origin;
-}
-
-/**
- * Whether plain http is safe enough for [hostname]: only this computer or a private network
- * (a desktop app serving its own dashboard to the house), never anything across the internet.
- */
-export function plainHttpAllowed(hostname: string): boolean {
-	const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-	if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
-	if (host === '::1' || host.startsWith('fe80:') || /^f[cd][0-9a-f]{2}:/.test(host)) return true;
-	const v4 = host.replace(/^::ffff:/, '').match(/^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
-	if (!v4) return false;
-	const [a, b] = [Number(v4[1]), Number(v4[2])];
-	return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 169 && b === 254);
 }
 
 async function json(response: Response): Promise<Record<string, unknown>> {
@@ -111,6 +99,7 @@ export async function startPairing(
 
 	const response = await fetch(`${base}/api/pair`, {
 		method: 'POST',
+		redirect: 'error',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ name, host: (io.host ?? hostname)(), cwd: store.root })
 	});
@@ -156,7 +145,9 @@ export async function waitForPairing(store: Store, io: PairIo = {}): Promise<num
 	const started = now();
 	for (;;) {
 		const response = await fetch(`${pending.url}/api/pair/${encodeURIComponent(pending.pairing_id)}`, {
-			headers: { Authorization: `Bearer ${pending.poll_secret}` }
+			headers: { Authorization: `Bearer ${pending.poll_secret}` },
+			// The poll secret, and the token that comes back, never follow a redirect.
+			redirect: 'error'
 		});
 		const body = await json(response);
 

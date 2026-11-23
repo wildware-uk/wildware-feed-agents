@@ -160,6 +160,11 @@ export type ReactionFrame = {
 	task_id: string | null;
 	/** The start of what was reacted to, so the agent knows which line it was. */
 	body: string;
+	/** Who wrote it: `human` or `agent:<id>` (newer servers). */
+	author?: string;
+	author_name?: string | null;
+	/** Whether this agent wrote it (newer servers). Only then is it "your message". */
+	mine?: boolean;
 };
 
 /**
@@ -501,11 +506,22 @@ export function describeAttachments(media: ChannelAttachment[] | undefined): str
  * thumbs-up was.
  */
 export function describeReaction(frame: ReactionFrame): string {
-	const about = frame.body.trim();
+	const about = slot(frame.body, 160);
 	const where = place(frame);
 	const verb = frame.on ? 'reacted' : 'removed their reaction';
-
-	return `Your owner ${verb} ${frame.emoji} on your message (${where}): ${about}`;
+	// "Your message" only when it is: a server that says who wrote it, and says it was this agent.
+	// Another agent's words, approved by a tick, are never this agent's plan.
+	const whose =
+		frame.mine === true
+			? 'your message'
+			: frame.author === 'human'
+				? 'a message from your owner'
+				: frame.author_name
+					? `a message from Agent ${slot(frame.author_name, 60)}, not you`
+					: frame.mine === false
+						? 'a message from another agent, not you'
+						: 'a message in your thread';
+	return `Your owner ${verb} ${tagValue(frame.emoji, 16)} on ${whose} (${where}): ${about}`;
 }
 
 /**
@@ -917,6 +933,8 @@ export async function runBridge(options: BridgeOptions): Promise<void> {
 		try {
 			const response = await fetcher(url, {
 				headers: { authorization: `Bearer ${token}`, accept: 'text/event-stream' },
+				// The token never follows a redirect: wherever it points, it isn't the dashboard asked.
+				redirect: 'error',
 				signal
 			});
 

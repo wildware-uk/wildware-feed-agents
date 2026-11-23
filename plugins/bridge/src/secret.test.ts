@@ -118,13 +118,22 @@ describe('env lines', () => {
 });
 
 describe('files', () => {
+	it('keep a file already there unless told to replace it', async () => {
+		const d = dashboard();
+		const to = join(dir(), 'key.txt');
+		writeFileSync(to, 'mine');
+		await expect(getSecret({ url: URL_, token: 't', name: 'K', to }, d)).rejects.toThrow('--force');
+		expect(readFileSync(to, 'utf8')).toBe('mine');
+		expect(d.calls).toEqual([]);
+	});
+
 	it('replace a symlink instead of writing through it', async () => {
 		const d = dir();
 		const target = join(d, 'elsewhere');
 		writeFileSync(target, 'keep');
 		const link = join(d, 'key.txt');
 		symlinkSync(target, link);
-		await getSecret({ url: URL_, token: 't', name: 'K', to: link }, dashboard());
+		await getSecret({ url: URL_, token: 't', name: 'K', to: link, force: true }, dashboard());
 		expect(readFileSync(target, 'utf8')).toBe('keep');
 		expect(readFileSync(link, 'utf8')).toBe(VALUE);
 		expect(lstatSync(link).isSymbolicLink()).toBe(false);

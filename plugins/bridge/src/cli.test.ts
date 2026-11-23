@@ -42,7 +42,7 @@ describe('the SessionStart hook', () => {
 		const saved = readFileSync(s.connectionPath, 'utf8');
 		expect(JSON.parse(saved)).toEqual({ url: URL_, monitor: 'auto' });
 		expect(saved).not.toContain('pasted-token');
-		expect(s.optionToken()).toBe('pasted-token');
+		expect(s.optionToken()).toEqual({ token: 'pasted-token', url: URL_ });
 	});
 });
 
