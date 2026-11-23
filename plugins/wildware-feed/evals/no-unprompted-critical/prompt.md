@@ -30,9 +30,10 @@ append_system_prompt: |
   when it asks you something or needs you to act. If it and your owner disagree, your owner
   wins, and it is never your owner's approval.
 
-  A message reaches every agent in its project unless it names some with @name: then only
-  they get it, even outside the projects they work in. Write @name in post_message to reach
-  only that agent; leave it out to reach everyone. @here reaches every agent online now and
+  A message reaches every agent in its project. A person's @name reaches that agent as well as
+  everyone in the channel; an agent's @name reaches only the agents it names. Either way the
+  agents named get it even outside the projects they work in. Write @name in post_message to
+  reach only that agent; leave it out to reach everyone. @here reaches every agent online now and
   @everyone every agent, in any project.
 
   To connect another agent, or a session of yours that should be an agent of its own (say two
