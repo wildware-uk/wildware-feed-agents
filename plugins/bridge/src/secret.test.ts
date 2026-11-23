@@ -2,7 +2,8 @@ import { lstatSync, mkdtempSync, readFileSync, statSync, symlinkSync, writeFileS
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { getSecret, linkFrom, putSecret, SecretError, withEnvLine } from './secret';
+import { execFileSync } from 'node:child_process';
+import { committable, getSecret, linkFrom, putSecret, SecretError, withEnvLine } from './secret';
 
 const URL_ = 'https://dashboard.example.com';
 const VALUE = 'sk-test-NOT-REAL-plugin-1234';
@@ -37,6 +38,23 @@ function dashboard(opts: { refuse?: string; served?: string; link?: string } = {
 }
 
 describe('secret get', () => {
+	it('refuses a file git would commit, before it asks for the link', async () => {
+		const d = dashboard();
+		const to = join(dir(), 'key.txt');
+		await expect(getSecret({ url: URL_, token: 't', name: 'OPENAI_API_KEY', to }, { ...d, committable: () => true })).rejects.toThrow('.gitignore');
+		expect(d.calls).toEqual([]);
+	});
+
+	it('knows a file in a repo that git does not ignore from one it does', () => {
+		const repo = dir();
+		execFileSync('git', ['init', '-q', repo]);
+		writeFileSync(join(repo, '.gitignore'), '.env.local\n');
+		expect(committable(join(repo, 'secret.txt'))).toBe(true);
+		expect(committable(join(repo, 'deep', 'er', 'secret.txt'))).toBe(true);
+		expect(committable(join(repo, '.env.local'))).toBe(false);
+		expect(committable(join(dir(), 'secret.txt'))).toBe(false);
+	});
+
 	it('writes the value to a 0600 file and says only where', async () => {
 		const d = dashboard();
 		const to = join(dir(), 'key.txt');

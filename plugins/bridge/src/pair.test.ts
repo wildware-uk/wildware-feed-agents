@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { origin, startPairing, waitForPairing, WAIT_BUDGET_MS } from './pair';
+import { origin, plainHttpAllowed, startPairing, waitForPairing, WAIT_BUDGET_MS } from './pair';
 import { Store } from './store';
 
 const URL_ = 'https://dashboard.example.com';
@@ -39,7 +39,7 @@ describe('pair start', () => {
 		const fetch = vi.fn(async () => reply(201, started));
 		const io = capture();
 
-		expect(await startPairing(s, { url: `${URL_}/mcp`, name: ' laptop ' }, { fetch, out: io.out, host: () => 'box' })).toBe(0);
+		expect(await startPairing(s, { url: `${URL_}/mcp`, known: [`${URL_}/mcp`], name: ' laptop ' }, { fetch, out: io.out, host: () => 'box' })).toBe(0);
 
 		const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
 		expect(url).toBe(`${URL_}/api/pair`);
@@ -52,30 +52,65 @@ describe('pair start', () => {
 	it('says why when the dashboard refuses', async () => {
 		const io = capture();
 		const fetch = vi.fn(async () => reply(429, { error: 'rate_limited', message: 'too many pairing calls' }));
-		expect(await startPairing(store(), { url: URL_, name: 'x' }, { fetch, out: io.out })).toBe(1);
+		expect(await startPairing(store(), { url: URL_, known: [URL_], name: 'x' }, { fetch, out: io.out })).toBe(1);
 		expect(io.text()).toContain('too many pairing calls');
 	});
 
 	it('will not pair a project twice without --force', async () => {
 		const s = store();
-		s.savePaired({ url: URL_, name: 'laptop', agent_id: null, token: 't', project: '/work/app', paired_at: '' });
+		s.savePaired({ url: URL_, known: [URL_], name: 'laptop', agent_id: null, token: 't', project: '/work/app', paired_at: '' });
 		const fetch = vi.fn();
 		const io = capture();
-		expect(await startPairing(s, { url: URL_, name: 'x' }, { fetch, out: io.out })).toBe(0);
+		expect(await startPairing(s, { url: URL_, known: [URL_], name: 'x' }, { fetch, out: io.out })).toBe(0);
 		expect(fetch).not.toHaveBeenCalled();
 		expect(io.text()).toContain('already paired as "laptop"');
 	});
 
+	it('stops before asking a dashboard this machine has not used, until the owner confirms its host', async () => {
+		const fetch = vi.fn(async () => reply(201, started));
+		const io = capture();
+		const forged = 'https://feed.attacker.example';
+		expect(await startPairing(store(), { url: forged, known: [URL_], name: 'laptop' }, { fetch, out: io.out })).toBe(3);
+		expect(fetch).not.toHaveBeenCalled();
+		expect(io.text()).toContain('Dashboard: https://feed.attacker.example');
+		expect(io.text()).toContain('Is feed.attacker.example your Wildware Feed dashboard?');
+		// A confirmation for some other host doesn't count.
+		expect(await startPairing(store(), { url: forged, known: [URL_], newDashboard: 'dashboard.example.com', name: 'laptop' }, { fetch, out: () => {} })).toBe(3);
+		expect(fetch).not.toHaveBeenCalled();
+
+		const confirmed = capture();
+		expect(await startPairing(store(), { url: forged, known: [URL_], newDashboard: 'FEED.attacker.example', name: 'laptop' }, { fetch, out: confirmed.out })).toBe(0);
+		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(confirmed.text()).toContain('Dashboard: https://feed.attacker.example');
+		expect(confirmed.text()).toContain('feed.attacker.example, now');
+	});
+
+	it('refuses plain http across the internet, but not on this computer or the house network', async () => {
+		const io = capture();
+		const fetch = vi.fn(async () => reply(201, started));
+		expect(await startPairing(store(), { url: 'http://feed.example.com', known: ['http://feed.example.com'], name: 'x' }, { fetch, out: io.out })).toBe(2);
+		expect(fetch).not.toHaveBeenCalled();
+		expect(io.text()).toContain('plain http');
+		// Built from parts: the repo keeps no house-network addresses in its files.
+		const house = [['192', '168', '1', '20'], ['10', '0', '0', '5']].map((parts) => parts.join('.'));
+		for (const host of ['127.0.0.1', 'localhost', '[::1]', ...house, '172.20.1.1', 'nas.local']) {
+			expect(plainHttpAllowed(new URL(`http://${host}:8010`).hostname)).toBe(true);
+		}
+		for (const host of ['feed.example.com', '8.8.8.8', '172.32.0.1', '[2001:db8::1]']) {
+			expect(plainHttpAllowed(new URL(`http://${host}`).hostname)).toBe(false);
+		}
+	});
+
 	it('refuses an empty name', async () => {
 		const io = capture();
-		expect(await startPairing(store(), { url: URL_, name: '  ' }, { fetch: vi.fn(), out: io.out })).toBe(2);
+		expect(await startPairing(store(), { url: URL_, known: [URL_], name: '  ' }, { fetch: vi.fn(), out: io.out })).toBe(2);
 	});
 });
 
 describe('pair wait', () => {
 	async function begun() {
 		const s = store();
-		await startPairing(s, { url: URL_, name: 'laptop' }, { fetch: vi.fn(async () => reply(201, started)), out: () => {} });
+		await startPairing(s, { url: URL_, known: [URL_], name: 'laptop' }, { fetch: vi.fn(async () => reply(201, started)), out: () => {} });
 		return s;
 	}
 

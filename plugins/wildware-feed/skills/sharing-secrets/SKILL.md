@@ -76,9 +76,11 @@ Use this instead of the lines above. One command does both steps and prints only
 name, refuses an env file that is a link, and only follows a link on your own dashboard:
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/bin/feed.mjs" secret get NAME --to secret.txt --data "${CLAUDE_PLUGIN_DATA}"
+node "${CLAUDE_PLUGIN_ROOT}/bin/feed.mjs" secret get NAME --to ~/.config/NAME.txt --data "${CLAUDE_PLUGIN_DATA}"
 node "${CLAUDE_PLUGIN_ROOT}/bin/feed.mjs" secret get NAME --env-file .env.local --data "${CLAUDE_PLUGIN_DATA}"
 node "${CLAUDE_PLUGIN_ROOT}/bin/feed.mjs" secret put NAME --from path/to/file --data "${CLAUDE_PLUGIN_DATA}"
 ```
 
-Files it writes are readable by you only (0600).
+Files it writes are readable by you only (0600). It refuses a file inside a git work tree
+that git doesn't ignore, so a secret is never one `git add` away from a commit: add the file
+to `.gitignore` first, or keep it outside the repo.

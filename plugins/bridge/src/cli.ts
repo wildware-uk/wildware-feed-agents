@@ -260,6 +260,7 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env, 
 			url: { type: 'string' },
 			name: { type: 'string' },
 			force: { type: 'boolean' },
+			'new-dashboard': { type: 'string' },
 			to: { type: 'string' },
 			'env-file': { type: 'string' },
 			as: { type: 'string' },
@@ -303,10 +304,16 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env, 
 					say('No dashboard URL. Pass --url https://your-dashboard, or set dashboard_url under /plugin.');
 					return 2;
 				}
-				return startPairing(store, { url, name: values.name ?? '', force: values.force });
+				return startPairing(store, {
+					url,
+					name: values.name ?? '',
+					force: values.force,
+					known: [readSettings(store)?.url, settingsFrom(env).url, store.paired()?.url],
+					newDashboard: values['new-dashboard']
+				});
 			}
 			if (sub === 'wait') return waitForPairing(store);
-			say('Usage: pair start --url <dashboard> --name <agent name> | pair wait');
+			say('Usage: pair start --url <dashboard> --name <agent name> [--new-dashboard <host>] | pair wait');
 			return 2;
 		}
 		case 'secret': {

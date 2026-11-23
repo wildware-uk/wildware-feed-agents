@@ -7,12 +7,36 @@
  * `create_secret_upload` for a link and sends a file's bytes to it. Each prints one short line
  * with the name and the size, never the value or the link.
  */
-import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { origin } from './pair';
 
-export type SecretIo = { fetch?: typeof globalThis.fetch };
+export type SecretIo = {
+	fetch?: typeof globalThis.fetch;
+	/** Whether git would commit [path]: in a work tree and not ignored. */
+	committable?: (path: string) => boolean;
+};
+
+/**
+ * Whether [path] is inside a git work tree and not ignored, so `git add .` would take it. Asked
+ * of git itself (`check-ignore`), from the nearest folder that exists. Outside any repo: false.
+ */
+export function committable(path: string): boolean {
+	let dir = dirname(resolve(path));
+	while (!existsSync(dir) && dirname(dir) !== dir) dir = dirname(dir);
+	const git = (args: string[]) => {
+		try {
+			execFileSync('git', ['-C', dir, ...args], { stdio: 'ignore' });
+			return true;
+		} catch {
+			return false;
+		}
+	};
+	if (!git(['rev-parse', '--is-inside-work-tree'])) return false;
+	return !git(['check-ignore', '-q', '--', resolve(path)]);
+}
 
 export type GetOptions = { url: string; token: string; name: string; to?: string; envFile?: string; as?: string };
 export type PutOptions = { url: string; token: string; name: string; from: string; note?: string };
@@ -170,6 +194,10 @@ export async function getSecret(options: GetOptions, io: SecretIo = {}): Promise
 	const variable = options.as ?? options.name;
 	if (envFile && !ENV_NAME.test(variable)) throw new SecretError(`${variable} is not an environment variable name: pass --as NAME`);
 	// Before the link is asked for, so a refusal does not spend it.
+	const target = (to ?? envFile)!;
+	if ((io.committable ?? committable)(target)) {
+		throw new SecretError(`${target} is in a git work tree and not ignored, so it could be committed: add it to .gitignore first, or write it outside the repo`);
+	}
 	const before = envFile ? readEnvFile(envFile) : '';
 
 	const grant = await tool(options.url, options.token, 'secret_url', { name: options.name }, io);
