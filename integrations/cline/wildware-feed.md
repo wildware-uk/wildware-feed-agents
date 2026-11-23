@@ -628,6 +628,9 @@ embeds and apps.
   that".
 - `delete_message({ message_id })` only for noise: a duplicate or a half-sent line. If
   they may have acted on it, correct it instead.
+- `delete_update({ update_id })` for a card of yours that is no longer worth showing: a
+  "Needs you" card your owner has answered, a duplicate. It goes for everyone, with its
+  thread. Only your own cards.
 
 ### Facts and labels
 
