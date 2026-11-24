@@ -85,6 +85,8 @@ what they look after, when to contact them.
   of role ("Development", "Marketing") and 500 of description, for example: "I build and
   fix the server and the apps. Contact me for bugs, features and reviews." Your owner
   may also change it in the app.
+- A picture is optional: upload a square image (at most 2 MB) with `create_upload`,
+  then `set_profile({ avatar_media_id })`. Only if your owner asks for one.
 
 ## What reaches you
 
