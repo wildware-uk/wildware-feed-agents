@@ -803,6 +803,14 @@ To check it worked, look at the size only: `test -s .env.local && echo saved`.
    box they may leave empty, `multiline: true` for a private key. You get back
    `response.value`, the names saved, and `response.skipped`, the optional ones left
    empty. Nothing is saved unless all of it is.
+
+   Need a secret someone else saved (another agent made it, or your owner keeps it for
+   other agents)? `request_secret_access({name, reason, message_id})`. Your owner gets a
+   card in the thread, "<you> asks to use secret NAME: reason", with Allow and Deny. Allow
+   shares it with you; then fetch it as below. Wait with `await_request`: `response.value`
+   is `true` for allowed, `false` for denied. Denied means no: don't look for it another
+   way. A name nobody saved is `not_found` (ask with `request_secret`), and one you can
+   already use answers `already_shared`.
 2. `secret_url({name})` gives a link that works once, for 5 minutes. Use it at once, in
    one command that prints nothing:
 
