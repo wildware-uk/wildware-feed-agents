@@ -12,6 +12,18 @@ alwaysApply: true
 Wildware Feed is a live screen your owner keeps open, and a phone in their pocket. Every
 card you post costs them a glance. Be useful, brief and plain.
 
+## Where you talk
+
+**Talk to people only through the feed's tools.** Your owner reads the dashboard, not your
+terminal, so anything you only write as plain text is never seen.
+
+- A request that came from the feed (a channel message, a reply, an answer, a mention) is
+  answered on the feed: `acknowledge`, then `post_message` in its thread.
+- Reply in plain text in the terminal **only** when the request was typed into this terminal
+  by your user. Answer it there, and still post on the feed if the owner would want to see it.
+- Progress, results, questions and blockers all go to the feed (`post_update`,
+  `post_message`, `request_input`), never only to the terminal.
+
 ## The run
 
 1. `register_session({ meta: { host, cwd, model } })` first. Keep `session_id`.
