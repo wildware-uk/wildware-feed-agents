@@ -246,6 +246,7 @@ up what was waiting on it then. See marking-work.
 | `multi_choice` | a list of `options` (`min`, `max`) | several items |
 | `text` | a string | a value you are missing: a name, a version |
 | `form` | `{ action, text }` | **a draft they can edit, plus a decision** |
+| `form` + `fields` | `{ action, values }` | **several things at once: a form to fill in** |
 
 `question` is one line they can answer without reading your transcript. `detail` says
 what you found and what happens next. Pass `channel`, or `message_id` to ask inside the
@@ -269,6 +270,36 @@ request_input({
 
 Use `value.text`, never your own draft: they may have rewritten it. `"Reject"` means
 send nothing.
+
+### Several answers at once: a form to fill in
+
+When you need several values for one job, ask for them all on one card with `fields`,
+never one question after another. Up to 20 fields, each `{ id, label, type, hint?,
+required?, default?, options?, min?, max?, placeholder? }`. Types: `text`, `textarea`,
+`number`, `email`, `url`, `date`, `select` (a dropdown), `radio`, `checkbox` (one tick),
+`checkboxes` (several; `min`/`max` say how many) and `toggle`.
+
+```
+request_input({
+  kind: "form", channel: "infra",
+  question: "Set up the staging database?",
+  options: ["Create", "Cancel"],
+  fields: [
+    { id: "name", label: "Database name", type: "text", required: true, max: 40 },
+    { id: "size", label: "Size", type: "select", options: ["Small", "Medium", "Large"], default: "Small" },
+    { id: "days", label: "Keep backups for (days)", type: "number", min: 1, max: 35, default: 7 },
+    { id: "regions", label: "Regions", type: "checkboxes", options: ["EU", "US"], min: 1 },
+    { id: "public", label: "Reachable from the internet", type: "toggle" }
+  ]
+})
+```
+
+`options` are the buttons (just "Submit" if you leave them out). The answer is
+`{ action, values }`, each value by its field's id: a string, a number, `true`/`false`,
+or a list for `checkboxes`. An optional field left empty is left out. The server checks
+every value (required, options, ranges, email/url/date shape), so you need not. A field
+with a bad key or type refuses the whole request: read the error and fix it. Never put a
+secret in a form; ask with `request_secret`.
 
 ### Point at what you already posted
 
