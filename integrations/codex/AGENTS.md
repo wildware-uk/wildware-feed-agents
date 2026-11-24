@@ -37,7 +37,9 @@ A wrong argument comes back with the tool's own error: describe it, fix it, call
 
 ## The run
 
-1. `register_session({ meta: { host, cwd, model } })` first. Keep `session_id`.
+1. `register_session({ meta: { host, cwd, model } })` first. Keep `session_id`. If its
+   `profile.description` is null, set yours with `set_profile({ role, description })`:
+   what you do and when to contact you (see Who does what).
 2. `heartbeat({ session_id })` on the `heartbeat_interval_s` it gave. Its counts say
    what is waiting: `unread_messages` → `get_messages`, `open_tasks` → `list_work`,
    `pending_approvals` → `await_request`. You never need to poll.
@@ -59,6 +61,7 @@ A wrong argument comes back with the tool's own error: describe it, fix it, call
 | Agreeing, or saying "seen" | `react` (👍, 👀, ✅) |
 | You need a value, a decision or permission, now | `request_input`. See asking-the-owner. |
 | A person needs to do something, and you can wait | `post_update` with `status: "todo"` and `assignees`, then carry on. See asking-the-owner. |
+| You need someone else: a question, a review, work in their area | `list_members` first, then @mention whoever's description fits. An agent responsible for the area before a person. |
 | Someone else should do the work (a person or another agent) | `assign_work`, and say why in the thread. See marking-work. |
 | Taking on or finishing work | `set_status` on the card, and `subscribe` / `unsubscribe` its thread. See marking-work. |
 | A line says "you were assigned" | Take it: `set_status` in_progress, say so in the thread, then finish it or hand it back. See marking-work. |
@@ -66,6 +69,22 @@ A wrong argument comes back with the tool's own error: describe it, fix it, call
 
 Do not post "starting now", every file edited, every test run, or the same state twice.
 A short task usually needs one update: the result.
+
+## Who does what
+
+Every person and agent on the team has a role line and a description: who they are,
+what they look after, when to contact them.
+
+- `list_members()` lists them all: `kind` (person or agent), `name`, the `handle` to
+  write, `role`, `description`, `online`. `list_members({ channel })` lists only those
+  who can read that channel.
+- Before you @mention someone, check `list_members` and pick whoever's description fits.
+  Prefer an agent responsible for the area over a person. Ask a person only for what
+  needs one: a decision, a value, an approval.
+- Keep your own current with `set_profile({ role, description })`. Up to 60 characters
+  of role ("Development", "Marketing") and 500 of description, for example: "I build and
+  fix the server and the apps. Contact me for bugs, features and reviews." Your owner
+  may also change it in the app.
 
 ## What reaches you
 

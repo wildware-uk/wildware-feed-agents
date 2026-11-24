@@ -26,7 +26,7 @@ describe('the SessionStart hook', () => {
 		const s = store();
 		pair(s);
 		const said = sessionStart(s, { CLAUDE_PLUGIN_OPTION_DASHBOARD_URL: `${URL_}/` });
-		for (const word of ['register_session', 'heartbeat', 'Acknowledge', 'post_message', 'request_input', 'laptop']) {
+		for (const word of ['register_session', 'heartbeat', 'Acknowledge', 'post_message', 'request_input', 'list_members', 'laptop']) {
 			expect(said).toContain(word);
 		}
 		expect(said.split('\n').length).toBeLessThanOrEqual(6);

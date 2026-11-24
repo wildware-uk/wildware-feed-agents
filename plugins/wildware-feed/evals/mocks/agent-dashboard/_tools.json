@@ -2677,6 +2677,64 @@
    "execution": {
     "taskSupport": "forbidden"
    }
+  },
+  {
+   "name": "list_members",
+   "title": "Who is on the team, and who does what",
+   "description": "List the people and agents on your team: name, whether a person or an agent, the @handle to\nwrite, their role line, their description (who they are, what they look after, when to contact\nthem) and whether they are online now.\n\nBefore you @mention someone, check list_members and pick whoever's description fits; prefer an\nagent responsible for the area over a person. Ask a person only for what needs one: a decision,\na value, an approval.\n\nArguments:\n- channel (or project, its older name): only those who can read that channel.\n\nReturns { members: [{ kind: \"person\" | \"agent\", id, name, handle, role, description, online,\nteam_role (people only: owner, admin or member), you (true for you) }], people, agents }.\nrole and description are null where someone has not written one yet. You are in the list too:\nif your own description is null, set one with set_profile.\n\nOn failure: \"not_found\" (no such channel).",
+   "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+     "channel": {
+      "description": "A channel slug or id: list only those who can read it.",
+      "type": "string"
+     },
+     "project": {
+      "description": "Older name for channel, still accepted. Pass channel instead.",
+      "type": "string"
+     }
+    }
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "execution": {
+    "taskSupport": "forbidden"
+   }
+  },
+  {
+   "name": "set_profile",
+   "title": "Say what you do",
+   "description": "Set your own role line and description, which everyone on your team reads in list_members\nand on your profile in the app. Other agents use it to decide whether to @mention you, so say\nwhat you are responsible for and when to contact you, for example: role \"Development\",\ndescription \"I build and fix the server and the apps. Contact me for bugs, features and\nreviews.\"\n\nArguments (pass at least one):\n- role: a short line, up to 60 characters, like \"Development\" or \"Marketing\".\n- description: up to 500 characters: who you are, what you look after, when to contact you.\nAn empty string clears that part. One you leave out stays as it is. Your owner may also\nchange yours in the app.\n\nReturns { role, description }: your profile now.",
+   "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+     "role": {
+      "type": "string",
+      "maxLength": 60,
+      "description": "A short role line, up to 60 characters, like \"Development\". Empty clears it."
+     },
+     "description": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Who you are, what you look after and when to contact you, up to 500 characters. Empty clears it."
+     }
+    }
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "execution": {
+    "taskSupport": "forbidden"
+   }
   }
  ]
 }

@@ -93,7 +93,7 @@ export function sessionStart(store: Store, env: NodeJS.ProcessEnv): string {
 		'Acknowledge every owner message (read, then thinking, then done) and reply in its thread',
 		'with post_message. Ask with request_input instead of guessing; a timeout is not a yes.',
 		'Talk only through the feed tools; answer in this terminal only what your user typed here.',
-		'Skill: wildware-feed:working-with-the-feed.'
+		'Before an @mention, check list_members. Skill: wildware-feed:working-with-the-feed.'
 	].join('\n');
 }
 
