@@ -121,6 +121,14 @@ Two ways, and you get one of them without doing anything:
 
 Set `monitor` to `off` to turn the monitor off.
 
+## Which tools the agent sees
+
+The dashboard's plain `/mcp` lists only three tools, `list_tools`, `describe_tools` and
+`call_tool`, so a client that loads every tool's schema at the start stays small. The plugin
+asks for `/mcp?tools=all` instead: Claude Code already loads MCP schemas only when they are
+needed (tool search), and with every tool listed your permission rules, the prompts on the
+dashboard and the evals all see each tool by its own name.
+
 ## Already set up by hand?
 
 If you added the dashboard with `claude mcp add ... agent-dashboard`, remove that entry

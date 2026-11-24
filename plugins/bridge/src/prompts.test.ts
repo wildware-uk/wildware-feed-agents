@@ -211,6 +211,18 @@ describe('what a prompt may say', () => {
 		expect(text).toContain('title, body');
 		expect(text).not.toContain('PRIVATE_TITLE');
 	});
+
+	it('names the tool a discovery call_tool runs, and its argument names, never their values', async () => {
+		const tool_name = 'mcp__plugin_wildware-feed_agent-dashboard__call_tool';
+		const text = await said({ ...bash(''), tool_name, tool_input: { name: 'post_message', arguments: { update_id: 'u1', body: 'PRIVATE_BODY' } } });
+		expect(text).toContain('post_message (plugin_wildware-feed_agent-dashboard)');
+		expect(text).toContain('update_id, body');
+		expect(text).not.toContain('PRIVATE_BODY');
+		// Without arguments it says so; a full mcp__ name is shortened to the tool's own.
+		const bare = await said({ ...bash(''), tool_name, tool_input: { name: 'mcp__x__list_projects' } });
+		expect(bare).toContain('list_projects (plugin_wildware-feed_agent-dashboard)');
+		expect(bare).toContain('no arguments');
+	});
 });
 
 describe('questions', () => {

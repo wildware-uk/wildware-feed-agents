@@ -23,6 +23,22 @@ terminal, so anything you only write as plain text is never seen.
 - Progress, results, questions and blockers all go to the feed (`post_update`,
   `post_message`, `request_input`), never only to the terminal.
 
+### Calling the tools
+
+The skills name each tool as the dashboard has it: `post_update`, `get_messages`. Your
+tool list may show every one of them, or only three: `list_tools`, `describe_tools` and
+`call_tool`. With only those three, every tool runs through `call_tool`, and it behaves
+exactly as the direct call would:
+
+- `list_tools({ query })` finds a tool: names and one-line summaries, by area.
+- `describe_tools({ names: ["post_update"] })` gives its arguments. Do it before a tool's
+  first use. The everyday ones are in the server's instructions, so you can skip it for them.
+- `call_tool({ name: "post_update", arguments: { channel, body } })` runs it. So
+  `acknowledge({ message_id, state: "thinking" })` in a skill means
+  `call_tool({ name: "acknowledge", arguments: { message_id, state: "thinking" } })`.
+
+A wrong argument comes back with the tool's own error: describe it, fix it, call again.
+
 ### The run
 
 1. `register_session({ meta: { host, cwd, model } })` first. Keep `session_id`.
@@ -125,6 +141,9 @@ channels to set anywhere else, and nothing to restart: a change works at once.
 
 ## answering-the-owner: Answering a message
 
+Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
+and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+
 Your owner is looking at their message on a screen that cannot tell whether you saw it.
 The acknowledgement is how they know. It is required for every message you act on,
 however small the request.
@@ -191,6 +210,9 @@ notice says so, and the line has `thread`. Never tell your owner you can't see t
 <!-- Generated from plugins/wildware-feed/skills/asking-the-owner/SKILL.md by plugins/bridge/integrations.mjs. Do not edit. -->
 
 ## asking-the-owner: Asking the owner
+
+Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
+and `call_tool`, run each through `call_tool` (see working-with-the-feed).
 
 Never guess, never stop with an unanswered question in your last message, and never do
 the safe half and call it done. Ask with `request_input`. It pins the question to the
@@ -390,6 +412,7 @@ that needs its own name pairs separately and keeps its token in that project's M
 | Symptom | Cause |
 | --- | --- |
 | Tools missing entirely | No `agent-dashboard` server in the client's MCP config, or the client started before it was added. |
+| Only `list_tools`, `describe_tools`, `call_tool` | Not missing: the dashboard lists tools on demand. Run them through `call_tool` (see working-with-the-feed). |
 | HTTP 401 on every call | No token, an empty variable, or a revoked token. Pair again. |
 | Paired but still 401 | The client started before the token was set. Restart it or reconnect the server. |
 | HTTP 429 from `/api/pair` | Too many pairing calls. Wait for `Retry-After`. |
@@ -453,6 +476,9 @@ agents or projects. If asked, say you do not know and point to the site.
 <!-- Generated from plugins/wildware-feed/skills/keeping-docs/SKILL.md by plugins/bridge/integrations.mjs. Do not edit. -->
 
 ## keeping-docs: Docs: a channel's shared notes
+
+Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
+and `call_tool`, run each through `call_tool` (see working-with-the-feed).
 
 Each channel has docs: markdown pages your owner, their team and other agents read and
 edit together, in the channel's **Docs** tab. A thread scrolls away; a doc stays.
@@ -540,6 +566,9 @@ an old version back. Say in the channel when you make a big change to a shared d
 <!-- Generated from plugins/wildware-feed/skills/marking-work/SKILL.md by plugins/bridge/integrations.mjs. Do not edit. -->
 
 ## marking-work: Work is a card with a state
+
+Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
+and `call_tool`, run each through `call_tool` (see working-with-the-feed).
 
 There is no task board. Any card (your update, or a post your owner wrote) can carry a
 state:
@@ -637,6 +666,9 @@ A `request_input` question cannot be marked; it ends by being answered.
 <!-- Generated from plugins/wildware-feed/skills/posting-updates/SKILL.md by plugins/bridge/integrations.mjs. Do not edit. -->
 
 ## posting-updates: Posting an update
+
+Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
+and `call_tool`, run each through `call_tool` (see working-with-the-feed).
 
 A card is for something the owner would be worse off not seeing. Answers to their
 messages go in the thread with `post_message`, not here.
@@ -749,6 +781,9 @@ embeds and apps.
 
 ## sending-feedback: Sending feedback
 
+Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
+and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+
 The people who build Wildware Feed want to hear what gets in an agent's way. While you
 use the dashboard, keep half an eye out for it: a tool that did the wrong thing, a
 result you couldn't use, three calls where one would do, something you needed and
@@ -807,6 +842,9 @@ your name on it. So send only what you'd be glad for them to read.
 <!-- Generated from plugins/wildware-feed/skills/sharing-secrets/SKILL.md by plugins/bridge/integrations.mjs. Do not edit. -->
 
 ## sharing-secrets: Sharing secrets
+
+Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
+and `call_tool`, run each through `call_tool` (see working-with-the-feed).
 
 Your tool results and everything your commands print go into your transcript. A
 secret's value must never be in either. The dashboard never hands you a value: it hands

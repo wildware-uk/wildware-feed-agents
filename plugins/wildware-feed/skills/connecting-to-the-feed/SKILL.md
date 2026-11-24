@@ -92,6 +92,7 @@ them, never post the token anywhere.
 | Symptom | Cause |
 | --- | --- |
 | Tools missing entirely | `dashboard_url` unset, or the session started before it was set. |
+| Only `list_tools`, `describe_tools`, `call_tool` | Not missing: the dashboard lists tools on demand. Run them through `call_tool` (see working-with-the-feed). |
 | HTTP 401 on every call | Not paired, or the token was revoked. Pair again. |
 | Paired but still 401 | The MCP connection is from before pairing. `/mcp` → reconnect. |
 | Replies arrive late | No channel. Normal: the monitor or `heartbeat` delivers them. |

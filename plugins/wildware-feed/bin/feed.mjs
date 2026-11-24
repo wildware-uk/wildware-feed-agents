@@ -366,7 +366,8 @@ var INSTRUCTIONS = [
   'this server was registered under, e.g. <channel source="agent-dashboard-channel" ...>.',
   "They mean work is waiting for you on the dashboard, and they carry counts rather than",
   "content, so read the work with the tools you already have on the agent-dashboard MCP",
-  "server:",
+  "server. If it lists only list_tools, describe_tools and call_tool, run each tool named",
+  'here through call_tool, e.g. call_tool({name: "acknowledge", arguments: {message_id, state}}):',
   "",
   "- A message event carries the text itself, with message_id, project, update_id and",
   '  task_id on the tag. Acknowledge it first \u2014 acknowledge({state: "thinking", message_id})',
@@ -1120,9 +1121,11 @@ function describeCall(toolName, input) {
     case "Agent":
       return { action: "start a helper agent", subject: truncate(redact(str(args.description) ?? ""), 200) };
     default: {
-      const keys = Object.keys(args).slice(0, 8).join(", ");
       const mcp = /^mcp__(.+?)__(.+)$/.exec(toolName);
-      const name = mcp ? `${mcp[2]} (${mcp[1]})` : toolName;
+      const inner = mcp?.[2] === "call_tool" ? str(args.name) : null;
+      const shown = inner && args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : inner ? {} : args;
+      const keys = Object.keys(shown).slice(0, 8).join(", ");
+      const name = mcp ? `${inner ? truncate(inner.replace(/^mcp__.+__/, "").replace(/[^\w.-]/g, ""), 80) : mcp[2]} (${mcp[1]})` : toolName;
       return { action: `use ${name}`, subject: keys ? `arguments: ${keys}` : "no arguments" };
     }
   }

@@ -77,7 +77,7 @@ describe('skills', () => {
 
 	it.each(skillNames)('%s only names tools the server really has', (name) => {
 		const called = [...skills[name].matchAll(/`?\b([a-z]+(?:_[a-z]+)+)\(/g)].map((m) => m[1]);
-		for (const tool of called) expect(tools, `${name} calls ${tool}`).toContain(tool);
+		for (const tool of called) expect([...tools, ...server.discovery], `${name} calls ${tool}`).toContain(tool);
 	});
 
 	it('says critical is only for when the owner asked, wherever it mentions it', () => {

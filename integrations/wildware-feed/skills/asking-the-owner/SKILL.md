@@ -7,6 +7,9 @@ description: Use when you need something only the owner can give on Wildware Fee
 
 # Asking the owner
 
+Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
+and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+
 Never guess, never stop with an unanswered question in your last message, and never do
 the safe half and call it done. Ask with `request_input`. It pins the question to the
 top of their screen and their phone.

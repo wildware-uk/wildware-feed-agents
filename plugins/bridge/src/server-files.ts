@@ -19,6 +19,10 @@ const ROOT = resolve(import.meta.dirname, '../../..');
 
 export const TOOLS_LIST = 'server/src/main/resources/mcp/tools-list.json';
 export const INSTRUCTIONS = 'server/src/main/resources/mcp/instructions.txt';
+/** What a plain `/mcp` adds to the instructions where `{{tools}}` stands: how to find and run tools. */
+export const DISCOVERY_INSTRUCTIONS = 'server/src/main/resources/mcp/instructions-discovery.txt';
+/** The three tools a plain `/mcp` lists: list_tools, describe_tools and call_tool. */
+export const DISCOVERY_TOOLS = 'server/src/main/resources/mcp/discovery-tools.json';
 
 /** The file's text, or null when it cannot be had and this is not CI. */
 export async function serverFile(path: string): Promise<string | null> {
@@ -35,10 +39,19 @@ export async function serverFile(path: string): Promise<string | null> {
 	}
 }
 
-/** The names of every MCP tool the server offers. */
-export async function serverTools(): Promise<{ names: string[]; live: boolean }> {
+/**
+ * The names of every MCP tool the server offers, and of the discovery tools that run them
+ * (`call_tool({ name, arguments })`), which a plain `/mcp` lists instead.
+ */
+export async function serverTools(): Promise<{ names: string[]; discovery: string[]; live: boolean }> {
 	const text = await serverFile(TOOLS_LIST);
-	if (text) return { names: (JSON.parse(text) as { name: string }[]).map((t) => t.name), live: true };
+	const names = (list: string) => (JSON.parse(list) as { name: string }[]).map((t) => t.name);
+	if (text) {
+		const discovery = await serverFile(DISCOVERY_TOOLS);
+		return { names: names(text), discovery: discovery ? names(discovery) : OFFLINE_DISCOVERY, live: true };
+	}
 	const copy = JSON.parse(readFileSync(resolve(ROOT, 'plugins/wildware-feed/evals/mocks/agent-dashboard/_tools.json'), 'utf8'));
-	return { names: (copy.tools as { name: string }[]).map((t) => t.name), live: false };
+	return { names: (copy.tools as { name: string }[]).map((t) => t.name), discovery: OFFLINE_DISCOVERY, live: false };
 }
+
+const OFFLINE_DISCOVERY = ['list_tools', 'describe_tools', 'call_tool'];

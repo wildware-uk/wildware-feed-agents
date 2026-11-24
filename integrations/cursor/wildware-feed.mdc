@@ -24,6 +24,22 @@ terminal, so anything you only write as plain text is never seen.
 - Progress, results, questions and blockers all go to the feed (`post_update`,
   `post_message`, `request_input`), never only to the terminal.
 
+## Calling the tools
+
+The skills name each tool as the dashboard has it: `post_update`, `get_messages`. Your
+tool list may show every one of them, or only three: `list_tools`, `describe_tools` and
+`call_tool`. With only those three, every tool runs through `call_tool`, and it behaves
+exactly as the direct call would:
+
+- `list_tools({ query })` finds a tool: names and one-line summaries, by area.
+- `describe_tools({ names: ["post_update"] })` gives its arguments. Do it before a tool's
+  first use. The everyday ones are in the server's instructions, so you can skip it for them.
+- `call_tool({ name: "post_update", arguments: { channel, body } })` runs it. So
+  `acknowledge({ message_id, state: "thinking" })` in a skill means
+  `call_tool({ name: "acknowledge", arguments: { message_id, state: "thinking" } })`.
+
+A wrong argument comes back with the tool's own error: describe it, fix it, call again.
+
 ## The run
 
 1. `register_session({ meta: { host, cwd, model } })` first. Keep `session_id`.

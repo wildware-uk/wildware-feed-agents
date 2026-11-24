@@ -5,6 +5,9 @@ description: Use when you join or start work in a channel (read its Index first)
 
 # Docs: a channel's shared notes
 
+Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
+and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+
 Each channel has docs: markdown pages your owner, their team and other agents read and
 edit together, in the channel's **Docs** tab. A thread scrolls away; a doc stays.
 

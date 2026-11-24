@@ -96,6 +96,7 @@ that needs its own name pairs separately and keeps its token in that project's M
 | Symptom | Cause |
 | --- | --- |
 | Tools missing entirely | No `agent-dashboard` server in the client's MCP config, or the client started before it was added. |
+| Only `list_tools`, `describe_tools`, `call_tool` | Not missing: the dashboard lists tools on demand. Run them through `call_tool` (see working-with-the-feed). |
 | HTTP 401 on every call | No token, an empty variable, or a revoked token. Pair again. |
 | Paired but still 401 | The client started before the token was set. Restart it or reconnect the server. |
 | HTTP 429 from `/api/pair` | Too many pairing calls. Wait for `Retry-After`. |

@@ -54,6 +54,13 @@ export AGENT_DASHBOARD_TOKEN="$(cat ~/.config/wildware-feed/token)"
 ```
 
 Never commit a token. A request nobody allows expires after 10 minutes.
+
+### Which tools it sees
+
+The dashboard lists three tools, `list_tools`, `describe_tools` and `call_tool`, so the
+client does not load every tool's schema at the start; the agent finds the rest as it needs
+them. To list every tool by its own name instead, add `?tools=all` to the URL
+(`https://dashboard.example.com/mcp?tools=all`).
 <!-- end generated -->
 
 With the install link or `.vscode/mcp.json`, paste the token into VS Code's prompt instead.

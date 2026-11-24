@@ -9,14 +9,16 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { parse as parseToml } from 'smol-toml';
 import { describe, expect, it } from 'vitest';
-import { INSTRUCTIONS, serverFile, serverTools } from './server-files';
+import { DISCOVERY_INSTRUCTIONS, INSTRUCTIONS, serverFile, serverTools } from './server-files';
 // @ts-expect-error: a plain .mjs script with no type declarations
 import * as gen from '../integrations.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 const read = (path: string) => readFileSync(resolve(ROOT, path), 'utf8');
 const files: Record<string, string> = gen.generate();
-const tools: string[] = (await serverTools()).names;
+const known = await serverTools();
+// A tool by its own name, or a discovery tool that runs it (call_tool).
+const tools: string[] = [...known.names, ...known.discovery];
 const instructions = await serverFile(INSTRUCTIONS);
 const skills: Record<string, Record<string, string>> = gen.neutralSkills();
 
@@ -190,6 +192,14 @@ describe.skipIf(instructions === null)('the MCP server instructions', () => {
 		expect(top).toContain('acknowledge({message_id, state: "thinking"})');
 		expect(top).toContain('post_message');
 		for (const rule of ['request_input', 'in so many words, to use critical', 'start_pairing', '/api/pair']) expect(text).toContain(rule);
+	});
+
+	it('teach plain /mcp clients to find tools, where {{tools}} stands, naming the everyday calls', async () => {
+		expect(text).toContain('{{tools}}');
+		const discovery = (await serverFile(DISCOVERY_INSTRUCTIONS)) ?? '';
+		for (const call of ['list_tools', 'describe_tools', 'call_tool({name, arguments})', 'acknowledge {', 'post_message {', 'get_messages {', 'request_input {', 'await_request {', 'heartbeat {', 'read_doc {']) {
+			expect(discovery).toContain(call);
+		}
 	});
 
 	it('still start the way the parity suite expects', () => {

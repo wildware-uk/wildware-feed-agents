@@ -112,9 +112,12 @@ export function describeCall(toolName: string, input: Record<string, unknown> | 
 		case 'Agent':
 			return { action: 'start a helper agent', subject: truncate(redact(str(args.description) ?? ''), 200) };
 		default: {
-			const keys = Object.keys(args).slice(0, 8).join(', ');
 			const mcp = /^mcp__(.+?)__(.+)$/.exec(toolName);
-			const name = mcp ? `${mcp[2]} (${mcp[1]})` : toolName;
+			// A discovery server's call_tool({ name, arguments }) is about the tool it runs.
+			const inner = mcp?.[2] === 'call_tool' ? str(args.name) : null;
+			const shown = inner && args.arguments && typeof args.arguments === 'object' && !Array.isArray(args.arguments) ? (args.arguments as Record<string, unknown>) : inner ? {} : args;
+			const keys = Object.keys(shown).slice(0, 8).join(', ');
+			const name = mcp ? `${inner ? truncate(inner.replace(/^mcp__.+__/, '').replace(/[^\w.-]/g, ''), 80) : mcp[2]} (${mcp[1]})` : toolName;
 			return { action: `use ${name}`, subject: keys ? `arguments: ${keys}` : 'no arguments' };
 		}
 	}
