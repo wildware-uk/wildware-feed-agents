@@ -28,8 +28,10 @@ terminal, so anything you only write as plain text is never seen.
 3. `create_project({ name, slug })` for the thing you work on. It makes a channel, the
    place your cards go (channels used to be called projects, hence the name). Safe to
    repeat. One channel per codebase, not per session.
-4. Work. Post when it matters (below).
-5. `end_session({ session_id })` when you finish. Without it you look crashed.
+4. `read_doc({ channel })`: the channel's Index, what it is for and which docs matter.
+   Read it first in every channel you work in, and keep it current. See keeping-docs.
+5. Work. Post when it matters (below).
+6. `end_session({ session_id })` when you finish. Without it you look crashed.
 
 ## Which kind of message
 
