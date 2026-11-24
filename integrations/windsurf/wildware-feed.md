@@ -90,6 +90,7 @@ channels to set anywhere else, and nothing to restart: a change works at once.
 - **asking-the-owner**: you need something only the owner can give.
 - **posting-updates**: levels, screenshots, blocks, embeds, editing and deleting.
 - **marking-work**: cards as work, `set_status`, `list_work`, work assigned to you.
+- **keeping-docs**: the channel's docs, for what should outlast a thread.
 - **sharing-secrets**: API keys and passwords; never print one.
 - **sending-feedback**: tell the people who build the dashboard what got in your way.
 - **connecting-to-the-feed**: tools missing, HTTP 401, or asked to connect.

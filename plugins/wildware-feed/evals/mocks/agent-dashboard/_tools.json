@@ -2393,6 +2393,222 @@
    "execution": {
     "taskSupport": "forbidden"
    }
+  },
+  {
+   "name": "list_docs",
+   "title": "List a channel’s docs",
+   "description": "Docs are a channel's shared notes: markdown pages that people and agents read and edit\ntogether, in the channel's Docs tab. Use them for what should outlast a thread: plans,\ndecisions, how-tos, specs, runbooks. List them before you write one, so you add to the doc\nthat is already there instead of starting a second.\n\nArguments:\n- channel (required): a slug or a 26-character id (`project`, its older name, still works).\n\nReturns { docs: [{ id, channel, title, version, size, updated_at, updated_by: { kind, name } }],\ncan_edit }, newest change first, without their text (read_doc gives it). can_edit is false\nwhen you may only read this channel: you can read its docs but not change them.\n\nOn failure: \"not_found\" means no such channel, or one you have no access to.",
+   "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+     "project": {
+      "description": "Older name for channel, still accepted. Pass channel instead.",
+      "type": "string"
+     },
+     "channel": {
+      "description": "The channel: its slug or its 26-character id.",
+      "type": "string"
+     }
+    }
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "execution": {
+    "taskSupport": "forbidden"
+   }
+  },
+  {
+   "name": "read_doc",
+   "title": "Read a doc",
+   "description": "Read one doc: its whole markdown text, its version, who saved it last, the docs it links\nto, and the docs that link to it.\n\nArguments (name one doc):\n- doc_id: from list_docs, search_docs or create_doc.\n- or title and channel: the doc with that title in that channel (any case).\n\nLinks: [[Doc name]] in a doc's text links to the doc with that title in the same channel;\n[[Doc name|shown text]] shows other words. links lists each one, with exists false when\nnobody has written that doc yet.\n\nReturns { doc: { id, channel, title, version, size, created_at, created_by, updated_at,\nupdated_by, body }, links: [{ title, id, exists }], linked_from: [{ id, title }], can_edit }.\nKeep the version: edit_doc needs it as base_version.\n\nOn failure: \"not_found\" means no such doc, or it is in a channel you have no access to.",
+   "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+     "doc_id": {
+      "description": "The doc's id, from list_docs, search_docs or create_doc.",
+      "type": "string"
+     },
+     "title": {
+      "description": "Or name the doc by its title (any case), with its channel, instead of doc_id.",
+      "type": "string"
+     },
+     "project": {
+      "description": "Older name for channel, still accepted. Pass channel instead.",
+      "type": "string"
+     },
+     "channel": {
+      "description": "The doc's channel, when you name it by title.",
+      "type": "string"
+     }
+    }
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "execution": {
+    "taskSupport": "forbidden"
+   }
+  },
+  {
+   "name": "search_docs",
+   "title": "Search docs",
+   "description": "Find docs whose title or text contains some words (any case), in one channel or in every\nchannel you can read. Title matches come first, then the newest. Search before you write a\ndoc, and when someone asks about something the team may have written down.\n\nArguments:\n- query (required): the words to find, as they appear.\n- channel (optional): one channel's slug or id. Omit for every channel you can read.\n- limit (optional): at most this many, 1 to 100 (default 20).\n\nReturns { docs: [{ id, channel, title, version, size, updated_at, updated_by, snippet }] }.\nsnippet is a little of the text around the first match. read_doc gives the whole doc.",
+   "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+     "query": {
+      "description": "The words to find in a title or text, any case.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+     },
+     "project": {
+      "description": "Older name for channel, still accepted. Pass channel instead.",
+      "type": "string"
+     },
+     "channel": {
+      "description": "Only this channel: its slug or id. Omit for every channel you can read.",
+      "type": "string"
+     },
+     "limit": {
+      "description": "At most this many results, 1 to 100. Default 20.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+     }
+    },
+    "required": [
+     "query"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "execution": {
+    "taskSupport": "forbidden"
+   }
+  },
+  {
+   "name": "create_doc",
+   "title": "Create a doc",
+   "description": "Start a new doc in a channel, at version 1. People see it in the channel's Docs tab at once.\n\nArguments:\n- channel (required): a slug or a 26-character id (`project`, its older name, still works).\n- title (required): unique in the channel, whatever the case; at most 200 characters, on one\n  line, without [ ] or |.\n- body (optional): the markdown text, at most 1 MB. Link other docs with [[Doc name]] or\n  [[Doc name|shown text]]; a link to a doc nobody has written yet is fine.\n\nLook first (list_docs or search_docs): if a doc on this already exists, edit that one.\n\nReturns { doc: { id, channel, title, version, size, updated_at, updated_by } }.\n\nOn failure: \"conflict\" means a doc with that title is already in the channel (the message\ngives its id: edit it instead). \"forbidden\" means you may only read this channel.\n\"not_found\" means no such channel. \"invalid_argument\" means a bad title, text over 1 MB,\nor a channel that already holds 1000 docs.",
+   "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+     "project": {
+      "description": "Older name for channel, still accepted. Pass channel instead.",
+      "type": "string"
+     },
+     "channel": {
+      "description": "The channel: its slug or its 26-character id.",
+      "type": "string"
+     },
+     "title": {
+      "description": "The doc's title: unique in the channel (any case), one line, at most 200 characters, no [ ] or |.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+     },
+     "body": {
+      "description": "The markdown text, at most 1 MB. Link other docs with [[Doc name]].",
+      "type": "string"
+     }
+    },
+    "required": [
+     "title"
+    ]
+   },
+   "annotations": {
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "execution": {
+    "taskSupport": "forbidden"
+   }
+  },
+  {
+   "name": "edit_doc",
+   "title": "Edit a doc",
+   "description": "Change a doc, based on the version you read. Every save keeps the one before it, so people\ncan see who changed what and put an old version back.\n\nArguments (name one doc):\n- doc_id: from list_docs, search_docs or create_doc.\n- or title and channel: the doc with that title in that channel (any case).\n- base_version (required): the version you read with read_doc (or got back from your last\n  edit). If someone saved after it, nothing is saved and you get \"conflict\": read_doc again,\n  make your change to the new text, and try again with the new version.\n- edits: find-and-replace changes, applied in order: [{ old_str, new_str }]. Each old_str must\n  be found exactly once in the text, as the edits before it left it; copy it exactly,\n  spaces and line breaks too, with enough around it to be unique. If any edit doesn't fit,\n  none is made. new_str \"\" deletes old_str. Prefer edits: they leave other people's changes\n  alone and cost little.\n- or body: the whole new text, replacing all of it. Use it for a rewrite, or a doc that is\n  short.\n- new_title (optional): rename the doc. Links to the old title stop finding it.\n\nReturns { doc: { id, channel, title, version, size, updated_at, updated_by } }. Use the new\nversion as base_version for your next edit.\n\nOn failure: \"conflict\" means the doc changed since base_version (or new_title is another\ndoc's). \"invalid_argument\" means an old_str found never or more than once, both edits and\nbody, or text over 1 MB; nothing was saved. \"forbidden\" means you may only read this\nchannel. \"not_found\" means no such doc.",
+   "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+     "doc_id": {
+      "description": "The doc's id, from list_docs, search_docs or create_doc.",
+      "type": "string"
+     },
+     "title": {
+      "description": "Or name the doc by its title (any case), with its channel, instead of doc_id.",
+      "type": "string"
+     },
+     "project": {
+      "description": "Older name for channel, still accepted. Pass channel instead.",
+      "type": "string"
+     },
+     "channel": {
+      "description": "The doc's channel, when you name it by title.",
+      "type": "string"
+     },
+     "base_version": {
+      "description": "The version your change is based on: the one read_doc gave you, or your last edit returned.",
+      "type": "integer",
+      "minimum": 1
+     },
+     "edits": {
+      "description": "Find-and-replace edits, in order, all or none. Each old_str must be found exactly once.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+       "type": "object",
+       "properties": {
+        "old_str": {
+         "description": "Text in the doc to change, copied exactly; found exactly once.",
+         "type": "string",
+         "minLength": 1
+        },
+        "new_str": {
+         "description": "What to put in its place; \"\" deletes it.",
+         "type": "string"
+        }
+       },
+       "required": [
+        "old_str",
+        "new_str"
+       ]
+      }
+     },
+     "body": {
+      "description": "Or the whole new text, replacing all of it. At most 1 MB.",
+      "type": "string"
+     },
+     "new_title": {
+      "description": "A new title for the doc, if you are renaming it.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+     }
+    },
+    "required": [
+     "base_version"
+    ]
+   },
+   "annotations": {
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "execution": {
+    "taskSupport": "forbidden"
+   }
   }
  ]
 }

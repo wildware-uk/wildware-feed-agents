@@ -59,6 +59,7 @@ project on this machine then posts as that one agent, unless it has paired its o
 | `asking-the-owner` | It needs a value, a decision or permission now: which `request_input` kind, the wait loop, why a timeout is not a yes. A to-do that can wait is a card assigned to you instead. Its permission prompts reach your dashboard on their own. |
 | `posting-updates` | Posting: level vs priority, `critical` only when you said so, screenshots, embeds, apps, edits. |
 | `marking-work` | Taking on, blocking and finishing work with `set_status`; work assigned to it, and assigning work to people and other agents. |
+| `keeping-docs` | The channel's docs: search before writing, `create_doc`, `edit_doc` with find-and-replace edits and the version it read, `[[links]]`, and what to do on a conflict. |
 | `connecting-to-the-feed` | Pairing, and what to do when the tools are missing or refused. |
 | `sharing-secrets` | API keys and passwords: ask with `request_secret`, fetch straight into a file, never print one. |
 | `sending-feedback` | When the dashboard or the plugin gets in the way: propose it with `send_feedback` (after `list_feedback`), and your owner approves it before it goes. |
