@@ -1,7 +1,9 @@
 ---
 type: tool_order
 before:
-  tool: mcp__plugin_wildware-feed_agent-dashboard__register_session
+  tool: mcp__plugin_wildware-feed_agent-dashboard__call_tool
+  input_match: '"name":"(?:mcp__[^"]*__)?register_session"'
 after:
-  tool: mcp__plugin_wildware-feed_agent-dashboard__post_update
+  tool: mcp__plugin_wildware-feed_agent-dashboard__call_tool
+  input_match: '"name":"(?:mcp__[^"]*__)?post_update"'
 ---

@@ -366,8 +366,8 @@ var INSTRUCTIONS = [
   'this server was registered under, e.g. <channel source="agent-dashboard-channel" ...>.',
   "They mean work is waiting for you on the dashboard, and they carry counts rather than",
   "content, so read the work with the tools you already have on the agent-dashboard MCP",
-  "server. If it lists only list_tools, describe_tools and call_tool, run each tool named",
-  'here through call_tool, e.g. call_tool({name: "acknowledge", arguments: {message_id, state}}):',
+  "server. Run each tool named here through call_tool (list_tools finds any you lack), e.g.",
+  'call_tool({name: "acknowledge", arguments: {message_id, state}}):',
   "",
   "- A message event carries the text itself, with message_id, project, update_id and",
   '  task_id on the tag. Acknowledge it first \u2014 acknowledge({state: "thinking", message_id})',
@@ -1399,7 +1399,10 @@ function alwaysRules(suggestions) {
   return (suggestions ?? []).filter((s) => s?.type === "addRules" && s.behavior === "allow" && Array.isArray(s.rules) && s.rules.length > 0);
 }
 function ruleText(s) {
-  return (s.rules ?? []).map((r) => r.ruleContent ? `${r.toolName}(${redact(r.ruleContent)})` : `${r.toolName}`).join(", ");
+  return (s.rules ?? []).map((r) => {
+    const rule = r.ruleContent ? `${r.toolName}(${redact(r.ruleContent)})` : `${r.toolName}`;
+    return !r.ruleContent && /^mcp__.+__call_tool$/.test(r.toolName ?? "") ? `${rule} (every tool on that server)` : rule;
+  }).join(", ");
 }
 var ALLOW = "Allow";
 var ALWAYS = "Always allow";
@@ -1651,11 +1654,11 @@ function sessionStart(store, env) {
   const who2 = token.name ? ` as "${token.name}"` : "";
   return [
     `Wildware Feed: your owner may be watching this run at ${settings.url}${who2}.`,
-    "register_session first and heartbeat on the interval it returns; end_session when done.",
-    "Acknowledge every owner message (read, then thinking, then done) and reply in its thread",
-    "with post_message. Ask with request_input instead of guessing; a timeout is not a yes.",
-    "Talk only through the feed tools; answer in this terminal only what your user typed here.",
-    "Before an @mention, check list_members. Skill: wildware-feed:working-with-the-feed."
+    "Run each dashboard tool with call_tool({name, arguments}); list_tools finds any you lack.",
+    "register_session first, heartbeat on its interval, end_session when done. Acknowledge each",
+    "owner message (read, thinking, done) and reply in its thread with post_message. Ask with",
+    "request_input, never guess; a timeout is not a yes. Talk only through the feed tools, and in",
+    "this terminal answer only your user. Before an @mention, list_members. Skill: wildware-feed:working-with-the-feed."
   ].join("\n");
 }
 function headers(store, env) {

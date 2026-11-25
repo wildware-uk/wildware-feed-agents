@@ -10,7 +10,7 @@
  * In CI a failed download is an error. Elsewhere, so the tests still run offline, the
  * tool list falls back to the evals' copy and checks that need the server are skipped.
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 export const SERVER_REPO = 'wildware-uk/wildware-feed';
@@ -50,8 +50,9 @@ export async function serverTools(): Promise<{ names: string[]; discovery: strin
 		const discovery = await serverFile(DISCOVERY_TOOLS);
 		return { names: names(text), discovery: discovery ? names(discovery) : OFFLINE_DISCOVERY, live: true };
 	}
-	const copy = JSON.parse(readFileSync(resolve(ROOT, 'plugins/wildware-feed/evals/mocks/agent-dashboard/_tools.json'), 'utf8'));
-	return { names: (copy.tools as { name: string }[]).map((t) => t.name), discovery: OFFLINE_DISCOVERY, live: false };
+	// Offline: the evals' copy, one describe_tools answer per tool (plugins/bridge/eval-mocks.mjs).
+	const copies = readdirSync(resolve(ROOT, 'plugins/wildware-feed/evals/mocks/agent-dashboard/describe'));
+	return { names: copies.filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3)), discovery: OFFLINE_DISCOVERY, live: false };
 }
 
 const OFFLINE_DISCOVERY = ['list_tools', 'describe_tools', 'call_tool'];

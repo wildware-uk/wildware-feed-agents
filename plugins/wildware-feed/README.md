@@ -123,11 +123,58 @@ Set `monitor` to `off` to turn the monitor off.
 
 ## Which tools the agent sees
 
-The dashboard's plain `/mcp` lists only three tools, `list_tools`, `describe_tools` and
-`call_tool`, so a client that loads every tool's schema at the start stays small. The plugin
-asks for `/mcp?tools=all` instead: Claude Code already loads MCP schemas only when they are
-needed (tool search), and with every tool listed your permission rules, the prompts on the
-dashboard and the evals all see each tool by its own name.
+The plugin connects to the dashboard's plain `/mcp`, which lists three tools: `list_tools`,
+`describe_tools` and `call_tool`. The agent finds a tool with `list_tools`, reads its
+arguments with `describe_tools`, and runs it with `call_tool({ name, arguments })`. The skills
+teach this.
+
+Why: Claude Code keeps a server's tool list from the moment a session starts. `list_tools`
+asks the live server every time, so a tool added to the dashboard later works at once in
+every session, with no restart. The old `/mcp?tools=all` (every tool by its own name) still
+works for other clients, but a long session never sees new tools through it.
+
+### Permissions
+
+Every dashboard tool runs through `call_tool`, so one rule covers them all. In your
+`settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_wildware-feed_agent-dashboard__list_tools",
+      "mcp__plugin_wildware-feed_agent-dashboard__describe_tools",
+      "mcp__plugin_wildware-feed_agent-dashboard__call_tool"
+    ]
+  }
+}
+```
+
+`list_tools` and `describe_tools` only read. **Always allow** on a dashboard prompt for
+`call_tool` adds that same rule, and the prompt says it covers every tool.
+
+A permission rule can't name one tool inside `call_tool`. To turn single tools off, or have
+them ask first, add a `PreToolUse` hook that reads the tool's name. This one refuses
+`delete_update` and `delete_message` and lets everything else through to your normal rules
+(change `deny` to `ask` to be asked instead):
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__plugin_wildware-feed_agent-dashboard__call_tool",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const n=String(JSON.parse(s).tool_input?.name??'').split('__').pop();if(['delete_update','delete_message'].includes(n))console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',permissionDecision:'deny',permissionDecisionReason:n+' is off in this project'}}))})\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
 
 ## Already set up by hand?
 
@@ -142,3 +189,5 @@ plugin is installed without `npm install`. Change the source there, then `npm ru
 `npm test` there checks the scripts, the skills against the server's tools, and that the
 committed scripts match the source. `evals/` holds `claude plugin eval` cases with mocked
 dashboard tools: `claude plugin eval plugins/wildware-feed --scaffold --allow-tools Write Edit`.
+The mocks list three tools, as a plain `/mcp` does; `call_tool` answers from `fixtures/<tool>.md`.
+`npm run eval-mocks` there rebuilds the parts copied from the server.

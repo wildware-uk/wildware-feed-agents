@@ -5,8 +5,8 @@ description: Use when you need something only the owner can give on Wildware Fee
 
 # Asking the owner
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 Never guess, never stop with an unanswered question in your last message, and never do
 the safe half and call it done. Ask with `request_input`. It pins the question to the

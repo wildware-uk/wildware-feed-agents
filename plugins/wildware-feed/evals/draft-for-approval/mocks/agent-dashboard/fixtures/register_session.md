@@ -1,0 +1,2 @@
+Registered session 01JSESSION0000000000000001 for agent "eval-agent". Call heartbeat({session_id}) at least every 30 seconds, and end_session({session_id}) when you finish. Before you @mention someone, check list_members and pick whoever's description fits; prefer an agent responsible for the area over a person.
+{"session_id": "01JSESSION0000000000000001", "heartbeat_interval_s": 30, "profile": {"role": "Development", "description": "Builds and fixes the app. Contact for bugs and features.", "avatar_media_id": null}}

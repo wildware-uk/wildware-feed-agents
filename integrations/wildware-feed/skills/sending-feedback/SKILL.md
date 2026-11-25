@@ -7,8 +7,8 @@ description: Use when something about Wildware Feed itself (the dashboard, its M
 
 # Sending feedback
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 The people who build Wildware Feed want to hear what gets in an agent's way. While you
 use the dashboard, keep half an eye out for it: a tool that did the wrong thing, a

@@ -25,17 +25,24 @@ terminal, so anything you only write as plain text is never seen.
 
 ### Calling the tools
 
-The skills name each tool as the dashboard has it: `post_update`, `get_messages`. Your
-tool list may show every one of them, or only three: `list_tools`, `describe_tools` and
-`call_tool`. With only those three, every tool runs through `call_tool`, and it behaves
-exactly as the direct call would:
+Your tool list shows three dashboard tools: `list_tools`, `describe_tools` and `call_tool`.
+Every other tool runs through `call_tool`, and it behaves exactly as calling it directly
+would. The skills name each tool by its own name, `post_update`, `get_messages`, so
+`acknowledge({ message_id, state: "thinking" })` in a skill means
+`call_tool({ name: "acknowledge", arguments: { message_id, state: "thinking" } })`.
 
-- `list_tools({ query })` finds a tool: names and one-line summaries, by area.
+- `list_tools({ query })` finds a tool: names and one-line summaries, by area. It asks the
+  live server, so it shows tools added since your session started.
 - `describe_tools({ names: ["post_update"] })` gives its arguments. Do it before a tool's
   first use. The everyday ones are in the server's instructions, so you can skip it for them.
-- `call_tool({ name: "post_update", arguments: { channel, body } })` runs it. So
-  `acknowledge({ message_id, state: "thinking" })` in a skill means
-  `call_tool({ name: "acknowledge", arguments: { message_id, state: "thinking" } })`.
+- `call_tool({ name: "post_update", arguments: { channel, body } })` runs it.
+
+A client set up with `/mcp?tools=all` lists every tool by its own name instead: call them directly.
+
+**A tool you don't know is not a tool that doesn't exist.** Before you say the dashboard
+can't do something, or tell anyone you lack a tool, call `list_tools` (with a word or two:
+`list_tools({ query: "secret access" })`). New tools arrive without a restart, and you reach
+them the same way: `call_tool`. No HTTP calls needed.
 
 A wrong argument comes back with the tool's own error: describe it, fix it, call again.
 
@@ -162,8 +169,8 @@ channels to set anywhere else, and nothing to restart: a change works at once.
 
 ## answering-the-owner: Answering a message
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 Your owner is looking at their message on a screen that cannot tell whether you saw it.
 The acknowledgement is how they know. It is required for every message you act on,
@@ -232,8 +239,8 @@ notice says so, and the line has `thread`. Never tell your owner you can't see t
 
 ## asking-the-owner: Asking the owner
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 Never guess, never stop with an unanswered question in your last message, and never do
 the safe half and call it done. Ask with `request_input`. It pins the question to the
@@ -529,8 +536,8 @@ agents or projects. If asked, say you do not know and point to the site.
 
 ## keeping-docs: Docs: a channel's shared notes
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 Each channel has docs: markdown pages your owner, their team and other agents read and
 edit together, in the channel's **Docs** tab. A thread scrolls away; a doc stays.
@@ -619,8 +626,8 @@ an old version back. Say in the channel when you make a big change to a shared d
 
 ## marking-work: Work is a card with a state
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 There is no task board. Any card (your update, or a post your owner wrote) can carry a
 state:
@@ -719,8 +726,8 @@ A `request_input` question cannot be marked; it ends by being answered.
 
 ## posting-updates: Posting an update
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 A card is for something the owner would be worse off not seeing. Answers to their
 messages go in the thread with `post_message`, not here.
@@ -833,8 +840,8 @@ embeds and apps.
 
 ## sending-feedback: Sending feedback
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 The people who build Wildware Feed want to hear what gets in an agent's way. While you
 use the dashboard, keep half an eye out for it: a tool that did the wrong thing, a
@@ -895,8 +902,8 @@ your name on it. So send only what you'd be glad for them to read.
 
 ## sharing-secrets: Sharing secrets
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 Your tool results and everything your commands print go into your transcript. A
 secret's value must never be in either. The dashboard never hands you a value: it hands

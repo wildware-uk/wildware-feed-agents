@@ -42,10 +42,14 @@ Never commit a token. A request nobody allows expires after 10 minutes.
 
 ### Which tools it sees
 
-The dashboard lists three tools, `list_tools`, `describe_tools` and `call_tool`, so the
-client does not load every tool's schema at the start; the agent finds the rest as it needs
-them. To list every tool by its own name instead, add `?tools=all` to the URL
-(`https://dashboard.example.com/mcp?tools=all`).
+Use the plain `/mcp` URL. The dashboard lists three tools, `list_tools`, `describe_tools`
+and `call_tool`: the agent finds a tool with `list_tools` and runs it with `call_tool`.
+`list_tools` asks the live server each time, so a tool added to the dashboard later works
+at once, with no restart, and the client never loads every schema up front.
+
+Optional: add `?tools=all` (`https://dashboard.example.com/mcp?tools=all`) to list every
+tool by its own name instead. Most clients keep that list from when they connect, so they
+see new tools only after a restart.
 <!-- end generated -->
 
 Cline does not read environment variables in headers: paste the token into the

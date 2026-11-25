@@ -106,6 +106,14 @@ describe('the permission prompt', () => {
 		expect(none.asked()[0].options).toEqual([ALLOW, DENY]);
 	});
 
+	it('says Always allow for a call_tool rule covers every tool on that server', async () => {
+		const rule = { type: 'addRules', behavior: 'allow', destination: 'localSettings', rules: [{ toolName: 'mcp__plugin_wildware-feed_agent-dashboard__call_tool' }] };
+		const dash = dashboard({ request_input: () => pending(), await_request: () => answered(ALLOW) });
+		const input = { ...bash(''), tool_name: 'mcp__plugin_wildware-feed_agent-dashboard__call_tool', tool_input: { name: 'post_message', arguments: { body: 'x' } }, permission_suggestions: [rule] };
+		await permissionPrompt(input, D, never, dash.io);
+		expect(dash.asked()[0].detail).toContain('mcp__plugin_wildware-feed_agent-dashboard__call_tool (every tool on that server)');
+	});
+
 	it('leaves it to the terminal when nobody answers in time, and takes the question down', async () => {
 		const dash = dashboard({ request_input: () => pending(), await_request: () => pending(), withdraw_request: () => ({ state: 'withdrawn' }) });
 		const out = await permissionPrompt(bash('npm publish'), D, { ...never, waitMs: 60_000 }, dash.io);

@@ -25,17 +25,24 @@ terminal, so anything you only write as plain text is never seen.
 
 ## Calling the tools
 
-The skills name each tool as the dashboard has it: `post_update`, `get_messages`. Your
-tool list may show every one of them, or only three: `list_tools`, `describe_tools` and
-`call_tool`. With only those three, every tool runs through `call_tool`, and it behaves
-exactly as the direct call would:
+Your tool list shows three dashboard tools: `list_tools`, `describe_tools` and `call_tool`.
+Every other tool runs through `call_tool`, and it behaves exactly as calling it directly
+would. The skills name each tool by its own name, `post_update`, `get_messages`, so
+`acknowledge({ message_id, state: "thinking" })` in a skill means
+`call_tool({ name: "acknowledge", arguments: { message_id, state: "thinking" } })`.
 
-- `list_tools({ query })` finds a tool: names and one-line summaries, by area.
+- `list_tools({ query })` finds a tool: names and one-line summaries, by area. It asks the
+  live server, so it shows tools added since your session started.
 - `describe_tools({ names: ["post_update"] })` gives its arguments. Do it before a tool's
   first use. The everyday ones are in the server's instructions, so you can skip it for them.
-- `call_tool({ name: "post_update", arguments: { channel, body } })` runs it. So
-  `acknowledge({ message_id, state: "thinking" })` in a skill means
-  `call_tool({ name: "acknowledge", arguments: { message_id, state: "thinking" } })`.
+- `call_tool({ name: "post_update", arguments: { channel, body } })` runs it.
+
+A client set up with `/mcp?tools=all` lists every tool by its own name instead: call them directly.
+
+**A tool you don't know is not a tool that doesn't exist.** Before you say the dashboard
+can't do something, or tell anyone you lack a tool, call `list_tools` (with a word or two:
+`list_tools({ query: "secret access" })`). New tools arrive without a restart, and you reach
+them the same way: `call_tool`. No HTTP calls needed.
 
 A wrong argument comes back with the tool's own error: describe it, fix it, call again.
 

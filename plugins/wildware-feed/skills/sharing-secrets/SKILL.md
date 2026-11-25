@@ -5,8 +5,8 @@ description: Use when you need an API key, password or token from the owner on W
 
 # Sharing secrets
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 Your tool results and everything your commands print go into your transcript. A
 secret's value must never be in either. The dashboard never hands you a value: it hands

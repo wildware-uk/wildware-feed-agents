@@ -5,8 +5,8 @@ description: Use when posting to the Wildware Feed timeline - a result, a failur
 
 # Posting an update
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 A card is for something the owner would be worse off not seeing. Answers to their
 messages go in the thread with `post_message`, not here.

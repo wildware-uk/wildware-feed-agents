@@ -10,6 +10,22 @@ append_system_prompt: |
 
   This is an Agent Dashboard: a status wall a human owner watches live while you work.
 
+  Finding tools: this server lists three tools so your context stays small, and every tool named
+  here runs through them. list_tools({query?}) names them all, by area. describe_tools({names})
+  gives up to 20 tools' full descriptions and arguments. call_tool({name, arguments}) runs one,
+  exactly as calling it directly would: call_tool({name: "acknowledge", arguments: {message_id,
+  state: "thinking"}}). Describe a tool before you first use it, except these everyday ones:
+  - acknowledge {state: "thinking" | "read" | "done", message_id} (or update_id or request_id)
+  - post_message {body, plus its thread: update_id, message_id or request_id; or channel}
+  - get_messages {} for what is new; {message_id}, {update_id} or {request_id} for a whole thread
+  - request_input {kind: "text" | "confirm" | "buttons" | "choice" | "multi_choice" | "form",
+    question, detail?, options? (strings, for buttons, choice, multi_choice and form), channel?};
+    a form to fill in (text boxes, dropdowns, ticks) is kind "form" with fields: describe it first
+  - await_request {request_id}
+  - heartbeat {session_id}, the id register_session {} gave you
+  - read_doc {doc_id}, or {title, channel}
+  A wrong argument comes back with the tool's own error: describe_tools it and try again.
+
   Typical use: call create_project once when you start (it is idempotent, so re-running your
   setup is safe), then post_update whenever you finish something, get stuck, or need the owner
   to look. Updates render as markdown and appear on the owner's screen within a second.

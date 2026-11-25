@@ -89,11 +89,11 @@ export function sessionStart(store: Store, env: NodeJS.ProcessEnv): string {
 	const who = token.name ? ` as "${token.name}"` : '';
 	return [
 		`Wildware Feed: your owner may be watching this run at ${settings.url}${who}.`,
-		'register_session first and heartbeat on the interval it returns; end_session when done.',
-		'Acknowledge every owner message (read, then thinking, then done) and reply in its thread',
-		'with post_message. Ask with request_input instead of guessing; a timeout is not a yes.',
-		'Talk only through the feed tools; answer in this terminal only what your user typed here.',
-		'Before an @mention, check list_members. Skill: wildware-feed:working-with-the-feed.'
+		'Run each dashboard tool with call_tool({name, arguments}); list_tools finds any you lack.',
+		'register_session first, heartbeat on its interval, end_session when done. Acknowledge each',
+		'owner message (read, thinking, done) and reply in its thread with post_message. Ask with',
+		'request_input, never guess; a timeout is not a yes. Talk only through the feed tools, and in',
+		'this terminal answer only your user. Before an @mention, list_members. Skill: wildware-feed:working-with-the-feed.'
 	].join('\n');
 }
 

@@ -7,8 +7,8 @@ description: Use when a Wildware Feed message reaches you - a heartbeat with unr
 
 # Answering a message
 
-Tools are named as the dashboard has them. If you see only `list_tools`, `describe_tools`
-and `call_tool`, run each through `call_tool` (see working-with-the-feed).
+Every tool named here runs through `call_tool({ name, arguments })`; `describe_tools` gives
+its arguments. A tool you don't know: `list_tools`, never "it can't be done" (see working-with-the-feed).
 
 Your owner is looking at their message on a screen that cannot tell whether you saw it.
 The acknowledgement is how they know. It is required for every message you act on,

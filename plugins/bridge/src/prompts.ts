@@ -417,7 +417,13 @@ export function alwaysRules(suggestions: Suggestion[] | undefined): Suggestion[]
 }
 
 function ruleText(s: Suggestion): string {
-	return (s.rules ?? []).map((r) => (r.ruleContent ? `${r.toolName}(${redact(r.ruleContent)})` : `${r.toolName}`)).join(', ');
+	return (s.rules ?? [])
+		.map((r) => {
+			const rule = r.ruleContent ? `${r.toolName}(${redact(r.ruleContent)})` : `${r.toolName}`;
+			// A rule for a discovery server's call_tool allows every tool it runs, not just this one.
+			return !r.ruleContent && /^mcp__.+__call_tool$/.test(r.toolName ?? '') ? `${rule} (every tool on that server)` : rule;
+		})
+		.join(', ');
 }
 
 export const ALLOW = 'Allow';

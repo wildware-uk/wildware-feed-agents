@@ -10,7 +10,8 @@
 		"build": "node build.mjs",
 		"test": "vitest run",
 		"check": "node build.mjs --check && node integrations.mjs --check",
-		"integrations": "node integrations.mjs"
+		"integrations": "node integrations.mjs",
+		"eval-mocks": "node eval-mocks.mjs"
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "1.32.2"

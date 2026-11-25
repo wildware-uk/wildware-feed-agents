@@ -11,6 +11,8 @@ import { join } from 'node:path';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { serverTools } from './server-files';
+// @ts-expect-error: a plain .mjs script with no type declarations
+import * as evalMocks from '../eval-mocks.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 const PLUGIN = resolve(ROOT, 'plugins/wildware-feed');
@@ -54,6 +56,11 @@ describe('marketplace and manifest', () => {
 		expect(JSON.stringify(mcp)).not.toContain('agent_token');
 		expect(JSON.stringify(mcp)).not.toContain('projects');
 		expect(mcp.mcpServers['agent-dashboard'].headersHelper).toContain('${CLAUDE_PROJECT_DIR}');
+	});
+
+	it('connects to plain /mcp, so list_tools always answers from the live server', () => {
+		// ?tools=all freezes the tool list when a session starts: a tool added later is never seen.
+		expect(mcp.mcpServers['agent-dashboard'].url).toBe('${user_config.dashboard_url}/mcp');
 	});
 
 	it('names no channels: the server alone decides what an agent hears', () => {
@@ -103,18 +110,46 @@ describe('skills', () => {
 });
 
 describe('the server, in its own repo', () => {
-	it.skipIf(!server.live)('the evals mock every tool the server has, and no other', () => {
-		const mocked = (json('plugins/wildware-feed/evals/mocks/agent-dashboard/_tools.json').tools as { name: string }[]).map((t) => t.name);
-		expect([...mocked].sort()).toEqual([...tools].sort());
+	it.skipIf(!server.live)('the evals list, describe and run tools as a plain /mcp session sees them', async () => {
+		const inputs = await evalMocks.serverInputs();
+		expect(evalMocks.stale(evalMocks.generate(inputs)), 'run node plugins/bridge/eval-mocks.mjs').toEqual([]);
+		const listed = (json('plugins/wildware-feed/evals/mocks/agent-dashboard/_tools.json').tools as { name: string }[]).map((t) => t.name);
+		expect(listed).toEqual(server.discovery);
+	});
+
+	it('the evals answer call_tool from a fixture per tool, in every case that changes one', () => {
+		const MOCKS = 'plugins/wildware-feed/evals/mocks/agent-dashboard';
+		expect(read(`${MOCKS}/call_tool.md`)).toBe(evalMocks.CALL_TOOL);
+		const fixtures = readdirSync(resolve(ROOT, `${MOCKS}/fixtures`)).map((f) => f.replace(/\.md$/, ''));
+		// A fixture names a real tool; fixtures are not templated, so none may hold {{...}}.
+		for (const name of fixtures) {
+			expect(tools, `fixture ${name}`).toContain(name);
+			expect(read(`${MOCKS}/fixtures/${name}.md`), name).not.toContain('{{');
+		}
+		for (const [kase, own] of Object.entries(evalMocks.OVERRIDES as Record<string, string[]>)) {
+			const dir = `plugins/wildware-feed/evals/${kase}/mocks/agent-dashboard`;
+			expect(read(`${dir}/call_tool.md`)).toBe(evalMocks.CALL_TOOL);
+			for (const name of own) expect(read(`${dir}/fixtures/${name}.md`)).not.toBe(read(`${MOCKS}/fixtures/${name}.md`));
+		}
+	});
+
+	it('the evals grade dashboard calls through call_tool, by the tool they run', () => {
+		const graders = execFileSync('git', ['ls-files', '-co', '--exclude-standard', 'plugins/wildware-feed/evals'], { cwd: ROOT, encoding: 'utf8' })
+			.split('\n')
+			.filter((f) => /\/graders\/.*\.md$/.test(f));
+		for (const file of graders) {
+			const text = read(file);
+			for (const m of text.matchAll(/tool: mcp__plugin_wildware-feed_agent-dashboard__(\w+)/g)) expect(m[1], file).toBe('call_tool');
+		}
 	});
 });
 
 describe('public repo hygiene', () => {
-	// _tools.json is a verbatim copy of the server's tools-list.json, checked with the server.
+	// _tools.json, list_tools.md and describe/ are verbatim copies of the server's tool files, checked with the server.
 	it('carries no home folders, LAN addresses or private hosts in the plugin', () => {
 		const files = execFileSync('git', ['ls-files', '-co', '--exclude-standard', 'plugins', '.claude-plugin'], { cwd: ROOT, encoding: 'utf8' })
 			.split('\n')
-			.filter((f) => f && !f.includes('node_modules') && !f.endsWith('.png') && !f.endsWith('.mjs') && !f.endsWith('package-lock.json') && !f.endsWith('_tools.json'));
+			.filter((f) => f && !f.includes('node_modules') && !f.endsWith('.png') && !f.endsWith('.mjs') && !f.endsWith('package-lock.json') && !f.endsWith('_tools.json') && !f.includes('/agent-dashboard/describe/') && !f.endsWith('/agent-dashboard/list_tools.md'));
 		for (const file of files) {
 			const text = read(file);
 			expect(text, file).not.toMatch(/\/home\/|\/srv\/|\/Users\/|192\.168\.|\b10\.\d+\.\d+\.\d+/);

@@ -2,7 +2,7 @@
 	"mcpServers": {
 		"agent-dashboard": {
 			"type": "http",
-			"url": "${user_config.dashboard_url}/mcp?tools=all",
+			"url": "${user_config.dashboard_url}/mcp",
 			"headersHelper": "node \"${CLAUDE_PLUGIN_ROOT}/bin/feed.mjs\" headers --data \"${CLAUDE_PLUGIN_DATA}\" --project \"${CLAUDE_PROJECT_DIR}\""
 		},
 		"agent-dashboard-channel": {
