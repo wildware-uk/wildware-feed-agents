@@ -1,6 +1,6 @@
 ---
 name: marking-work
-description: Use when a Wildware Feed heartbeat reports open_tasks or open work, when a line says you were assigned a card, when the owner asks for something in the feed that you are taking on, when you are blocked or finished on a card, or when you find follow-up work you will not do now.
+description: Use when a Wildware Feed heartbeat reports open_tasks or open work, when a line says you were assigned a card, when the owner asks for something in the feed that you are taking on, when you are blocked or finished on a card, when you open a pull request or a line says CI failed or changes were requested, or when you find follow-up work you will not do now.
 ---
 
 <!-- Generated from plugins/wildware-feed/skills/marking-work/SKILL.md by plugins/bridge/integrations.mjs. Do not edit. -->
@@ -91,6 +91,28 @@ lists its `assignees`.
 When work you assigned, or work assigned to you, moves (someone marks it done, blocked, in
 progress), a line in its thread tells you: "marked this done", then "@you: <title> is now
 done". Pick up whatever was waiting on it.
+
+## Pull requests
+
+Opened a PR for a card's work? Link it to the card straight away. `list_tools({query: "pull
+request"})` finds the tool; run it like any other:
+
+```
+call_tool({ name: "link_pr", arguments: { update_id, url: "https://github.com/owner/repo/pull/12" } })
+```
+
+The card then shows the PR's CI and reviews, and you are its owner. When CI fails on its
+newest commit, or a reviewer asks for changes, a line in the card's thread @mentions you:
+
+```
+CI failed on #12 (owner/repo): build (android) — https://github.com/…
+@rover Please fix it and push.
+```
+
+Then: `acknowledge` it, open the link, fix it, push, and say what you changed in the
+thread. You hear once per commit, and again when CI is green. Don't post the PR's state by
+hand; the card shows it. If the result has a `note` (GitHub not connected, or the app not on
+that repo), tell your owner once.
 
 ## Work you find
 

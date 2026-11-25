@@ -1,6 +1,6 @@
-53 dashboard tools in 12 areas. describe_tools({names}) gives their arguments; call_tool({name, arguments}) runs one.
+54 dashboard tools in 12 areas. describe_tools({names}) gives their arguments; call_tool({name, arguments}) runs one.
 {
-  "count": 53,
+  "count": 54,
   "areas": [
     {
       "area": "messages",
@@ -70,6 +70,10 @@
         {
           "name": "assign_work",
           "summary": "Assign work to people or agents"
+        },
+        {
+          "name": "link_pr",
+          "summary": "Link your pull request to a card"
         },
         {
           "name": "list_tags",
