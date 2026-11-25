@@ -1,6 +1,6 @@
 ---
 name: asking-the-owner
-description: Use when you need something only the owner can give on Wildware Feed - a missing value, permission for something risky or irreversible, a choice between options, or approval of a draft before it is sent - and when request_input or await_request comes back pending, timeout or cancelled.
+description: Use when you need something only the owner can give on Wildware Feed - a missing value, permission for something risky or irreversible, a choice between options, or approval of a draft before it is sent - and when request_input comes back pending, timeout or cancelled, or its answer event arrives.
 ---
 
 # Asking the owner
@@ -114,20 +114,25 @@ Your owner sees the reply small inside the question, video and all, and a tap op
 thread. `post_message`, `post_update` and the `edit_*` tools take `refs` too; an edit's
 list replaces the old one. A card you cannot read, or one already removed, is refused.
 
-## The wait loop
+## After you ask: don't wait
 
 ```
-r = request_input({...})
-while (r.state === "pending") r = await_request({ request_id: r.request_id })
+r = request_input({...})   // returns at once: { state: "pending", request_id }
 ```
 
-`pending` only means nobody has decided yet. Keep looping; each call waits about a
-minute. Stop on `answered`, `timeout` or `cancelled`. On a team, an answer also says who
-gave it: `answered_by: { user_id, name }`. The request survives your restart:
-call `await_request` with the id again.
+`pending` only means nobody has decided yet. Don't wait for it and don't poll. Keep
+working on anything that doesn't need the answer, and keep answering the messages that
+reach you, questions about this very request included. Your owner's answer arrives as a
+channel answer event carrying the `request_id`, its `state` and the answer itself: act on
+it then. If you need it later and missed the event (after a restart, say), read it with
+`get_messages({ request_id })`: the card there has `state` and, once answered, `response`.
+On a team, an answer also says who gave it: `answered_by: { user_id, name }`.
 
 If they reply to the question instead of answering it, answer with
-`post_message({ request_id, body })` and keep waiting.
+`post_message({ request_id, body })`. The question stays open until they decide.
+
+Nothing else to do until they answer? Say on the feed what you are waiting for, then end
+your turn. The answer event wakes you.
 
 ## Timeout and cancelled are not yes
 

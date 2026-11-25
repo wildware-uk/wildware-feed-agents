@@ -26,8 +26,8 @@
  * ones in channels and threads that agent follows.
  *
  * The tools still do the rest: `get_messages` is the only thing that marks
- * anything read, and tasks and approvals are still counts pointing at
- * `list_work` and `await_request`. This process remains a read-only client of
+ * anything read, and tasks are still a count pointing at `list_work`. An
+ * answer to the agent's own question arrives as an answer event. This process remains a read-only client of
  * the dashboard with no write path at all.
  *
  * For the same reason it is a **one-way** channel: no `tools` capability, no
@@ -106,8 +106,8 @@ export type ChannelMessage = {
 	 * A question of your own your owner is talking over (migration 032).
 	 *
 	 * They replied to a `request_input` instead of answering it. The question is
-	 * still open: answer them with `post_message({ request_id })` and keep
-	 * `await_request` running.
+	 * still open: answer them with `post_message({ request_id })`; the answer
+	 * itself arrives later as an answer event.
 	 */
 	request_id?: string | null;
 };
@@ -237,8 +237,9 @@ export const INSTRUCTIONS = [
 	'  not finished (the board is gone; work is a state a card is in). Call list_work to see',
 	'  them, then set_status({..., status: "in_progress"}) on the one you are taking. Check',
 	'  what is already in_progress first: another agent may be on it.',
-	'- pending_approvals above zero: one of your own request_input calls is still waiting on',
-	'  the owner; call await_request with its request_id.',
+	'- pending_approvals above zero: that many of your own request_input questions are still',
+	'  waiting on the owner. Do not wait for them: keep working and answering messages, and',
+	'  act when the answer event arrives.',
 	'- A reaction event is your owner putting an emoji on something you said: a tick means',
 	'  read and approved, eyes means seen, a thumbs-down means stop. It carries the emoji and',
 	'  the start of your own message, so you rarely need to look anything up. Nothing is',
@@ -246,7 +247,7 @@ export const INSTRUCTIONS = [
 	'- An answer event is your owner settling one of your request_input calls — a button they',
 	'  clicked, a form they submitted, a prompt they dismissed. It carries the answer itself',
 	'  with request_id and state on the tag, so you can act on it without asking again;',
-	'  await_request re-reads the row when you want the typed value in full. A state of',
+	'  get_messages({request_id}) reads it in full (a form\'s typed text, say). A state of',
 	'  "timeout" or "cancelled" is not permission: it means nobody answered.',
 	'- A block event is your owner ticking a line of one of your checklists, or voting in one',
 	'  of your polls (blocks on post_update, post_message and request_input). It says which',
@@ -590,7 +591,7 @@ function answerText(answer: AnswerFrame['answer']): string {
 	if (typeof answer === 'object') {
 		// A form: the action is the decision, and the text is what it applies to.
 		// The text can be a whole drafted message, so it is left for the agent to
-		// read with await_request rather than pasted into a notification.
+		// read with get_messages({request_id}) rather than pasted into a notification.
 		return `"${answer.action}" on ${answer.text.length} characters of text`;
 	}
 	return `"${answer}"`;
@@ -903,10 +904,9 @@ export async function runBridge(options: BridgeOptions): Promise<void> {
 			if (message.media && message.media.length > 0) {
 				attributes.attachments = String(message.media.length);
 			}
-			// A line on one of your own questions reads as one: the agent is parked
-			// in `await_request`, and being told "your owner said X" without being
-			// told it is about the question it is waiting on is how a discussion
-			// gets answered as if it were a new topic.
+			// A line on one of your own questions reads as one: being told "your
+			// owner said X" without being told it is about the question still open is
+			// how a discussion gets answered as if it were a new topic.
 			const about = message.request_id ? ' about your open question' : '';
 			await send(
 				`${who} on ${where}${about}${quoting(message.in_reply_to)}: ${messageBody(message.body, byOwner)}` +

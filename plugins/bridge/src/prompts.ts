@@ -62,6 +62,11 @@ export const WAIT_MS = 15 * 60_000;
 export const GRACE_MS = 5_000;
 /** How often the transcript is read for an answer given at the terminal. */
 export const WATCH_MS = 1_500;
+/**
+ * How often the dashboard is asked where the questions stand, all of them together: one
+ * get_messages call per [POLL_MS], so a hook never spends much of the agent's 120 calls a minute.
+ */
+export const POLL_MS = 3_000;
 /** How long one refusals card keeps collecting before the next refusal starts a new one. */
 export const CARD_FOR_MS = 30 * 60_000;
 /** The most lines a refusals card lists. */
@@ -116,7 +121,17 @@ export async function callTool(d: Dashboard, name: string, args: Record<string, 
 	return data ?? {};
 }
 
-type RequestState = { state?: string; request_id?: string; response?: { kind?: string; value?: unknown }; answered_by?: { user_id?: unknown; name?: unknown }; author?: unknown; poll_after_ms?: number };
+type RequestState = { state?: string; request_id?: string; response?: { kind?: string; value?: unknown }; answered_by?: { user_id?: unknown; name?: unknown }; author?: unknown };
+
+/**
+ * Where request [id] stands, read without waiting: get_messages({request_id}) gives the
+ * question's card, with its state and, once answered, the response and who gave it.
+ */
+async function requestState(d: Dashboard, id: string, io: Io, signal?: AbortSignal): Promise<RequestState> {
+	const read = await callTool(d, 'get_messages', { request_id: id }, io, signal);
+	const card = (read.thread as { card?: RequestState } | undefined)?.card ?? {};
+	return { ...card, request_id: id };
+}
 
 /**
  * Whether [r] is an answer a person gave. Only "answered" is: "timeout", "cancelled" and
@@ -204,20 +219,23 @@ export async function ask(d: Dashboard, asks: Ask[], options: AskOptions, io: Io
 		return null;
 	}
 
+	// request_input returns at once, so each question is read back now and then. Each one is
+	// asked every POLL_MS × the number of questions: one call per POLL_MS in all.
+	const every = POLL_MS * asks.length;
 	const waits = results.map(async (first, i) => {
 		let r = first;
 		while (r.state === 'pending' && !controller.signal.aborted) {
-			const asked = now();
+			await sleep(every, controller.signal);
+			if (controller.signal.aborted) return r;
 			try {
-				r = (await callTool(d, 'await_request', { request_id: open[i] }, io, controller.signal)) as RequestState;
+				r = await requestState(d, open[i]!, io, controller.signal);
 			} catch (e) {
 				if (controller.signal.aborted) return r;
-				io.log?.(e instanceof Error ? e.message : 'await_request failed');
+				io.log?.(e instanceof Error ? e.message : 'get_messages failed');
 				// One failed call is not the end of the wait: the dashboard may be restarting.
 				await sleep(5_000, controller.signal);
 				continue;
 			}
-			if (r.state === 'pending' && now() - asked < 2_000) await sleep(Math.min(Math.max(r.poll_after_ms ?? 1_000, 500), 10_000), controller.signal);
 		}
 		if (r.state !== 'pending') open[i] = null;
 		results[i] = r;

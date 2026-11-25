@@ -1,6 +1,6 @@
-54 dashboard tools in 12 areas. describe_tools({names}) gives their arguments; call_tool({name, arguments}) runs one.
+53 dashboard tools in 12 areas. describe_tools({names}) gives their arguments; call_tool({name, arguments}) runs one.
 {
-  "count": 54,
+  "count": 53,
   "areas": [
     {
       "area": "messages",
@@ -95,10 +95,6 @@
         {
           "name": "request_input",
           "summary": "Ask your owner for something and wait"
-        },
-        {
-          "name": "await_request",
-          "summary": "Keep waiting for your owner to answer"
         },
         {
           "name": "edit_request",

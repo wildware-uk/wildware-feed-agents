@@ -92,8 +92,8 @@ export function sessionStart(store: Store, env: NodeJS.ProcessEnv): string {
 		'Run each dashboard tool with call_tool({name, arguments}); list_tools finds any you lack.',
 		'register_session first, heartbeat on its interval, end_session when done. Acknowledge each',
 		'owner message (read, thinking, done) and reply in its thread with post_message. Ask with',
-		'request_input, never guess; a timeout is not a yes. Talk only through the feed tools, and in',
-		'this terminal answer only your user. Before an @mention, list_members. Skill: wildware-feed:working-with-the-feed.'
+		'request_input, never guess, then carry on: the answer comes as a channel event; a timeout is not a yes.',
+		'Talk only through the feed tools, and in this terminal answer only your user. Before an @mention, list_members. Skill: wildware-feed:working-with-the-feed.'
 	].join('\n');
 }
 

@@ -31,7 +31,8 @@ const SERVER = {
 /** The cases that answer some tools differently: case folder to the fixtures it writes itself. */
 export const OVERRIDES = {
 	'owner-message-in-thread': ['get_messages'],
-	'draft-for-approval': ['await_request']
+	'draft-for-approval': ['request_input'],
+	'timeout-is-not-yes': ['request_input']
 };
 
 /** The body of every call_tool mock: the fixture named after the tool it runs. */

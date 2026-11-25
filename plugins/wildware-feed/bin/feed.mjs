@@ -390,8 +390,9 @@ var INSTRUCTIONS = [
   "  not finished (the board is gone; work is a state a card is in). Call list_work to see",
   '  them, then set_status({..., status: "in_progress"}) on the one you are taking. Check',
   "  what is already in_progress first: another agent may be on it.",
-  "- pending_approvals above zero: one of your own request_input calls is still waiting on",
-  "  the owner; call await_request with its request_id.",
+  "- pending_approvals above zero: that many of your own request_input questions are still",
+  "  waiting on the owner. Do not wait for them: keep working and answering messages, and",
+  "  act when the answer event arrives.",
   "- A reaction event is your owner putting an emoji on something you said: a tick means",
   "  read and approved, eyes means seen, a thumbs-down means stop. It carries the emoji and",
   "  the start of your own message, so you rarely need to look anything up. Nothing is",
@@ -399,7 +400,7 @@ var INSTRUCTIONS = [
   "- An answer event is your owner settling one of your request_input calls \u2014 a button they",
   "  clicked, a form they submitted, a prompt they dismissed. It carries the answer itself",
   "  with request_id and state on the tag, so you can act on it without asking again;",
-  "  await_request re-reads the row when you want the typed value in full. A state of",
+  "  get_messages({request_id}) reads it in full (a form's typed text, say). A state of",
   '  "timeout" or "cancelled" is not permission: it means nobody answered.',
   "- A block event is your owner ticking a line of one of your checklists, or voting in one",
   "  of your polls (blocks on post_update, post_message and request_input). It says which",
@@ -1135,6 +1136,7 @@ function describeCall(toolName, input) {
 var WAIT_MS = 15 * 6e4;
 var GRACE_MS = 5e3;
 var WATCH_MS = 1500;
+var POLL_MS = 3e3;
 var CARD_FOR_MS = 30 * 6e4;
 var CARD_LINES = 12;
 var DENIED_ON_DASHBOARD = "Your owner refused this on the Wildware Feed dashboard.";
@@ -1178,6 +1180,11 @@ async function callTool(d, name, args, io = {}, signal) {
   }
   if (result.isError) throw new DashboardError(`${name}: ${typeof data?.message === "string" ? data.message : "refused"}`);
   return data ?? {};
+}
+async function requestState(d, id, io, signal) {
+  const read = await callTool(d, "get_messages", { request_id: id }, io, signal);
+  const card = read.thread?.card ?? {};
+  return { ...card, request_id: id };
 }
 function answeredByHuman(r) {
   if (r.state !== "answered" || !r.response) return false;
@@ -1234,19 +1241,20 @@ async function ask(d, asks, options, io = {}) {
     await takeDown();
     return null;
   }
+  const every = POLL_MS * asks.length;
   const waits = results.map(async (first2, i) => {
     let r = first2;
     while (r.state === "pending" && !controller.signal.aborted) {
-      const asked = now();
+      await sleep(every, controller.signal);
+      if (controller.signal.aborted) return r;
       try {
-        r = await callTool(d, "await_request", { request_id: open[i] }, io, controller.signal);
+        r = await requestState(d, open[i], io, controller.signal);
       } catch (e) {
         if (controller.signal.aborted) return r;
-        io.log?.(e instanceof Error ? e.message : "await_request failed");
+        io.log?.(e instanceof Error ? e.message : "get_messages failed");
         await sleep(5e3, controller.signal);
         continue;
       }
-      if (r.state === "pending" && now() - asked < 2e3) await sleep(Math.min(Math.max(r.poll_after_ms ?? 1e3, 500), 1e4), controller.signal);
     }
     if (r.state !== "pending") open[i] = null;
     results[i] = r;
@@ -1657,8 +1665,8 @@ function sessionStart(store, env) {
     "Run each dashboard tool with call_tool({name, arguments}); list_tools finds any you lack.",
     "register_session first, heartbeat on its interval, end_session when done. Acknowledge each",
     "owner message (read, thinking, done) and reply in its thread with post_message. Ask with",
-    "request_input, never guess; a timeout is not a yes. Talk only through the feed tools, and in",
-    "this terminal answer only your user. Before an @mention, list_members. Skill: wildware-feed:working-with-the-feed."
+    "request_input, never guess, then carry on: the answer comes as a channel event; a timeout is not a yes.",
+    "Talk only through the feed tools, and in this terminal answer only your user. Before an @mention, list_members. Skill: wildware-feed:working-with-the-feed."
   ].join("\n");
 }
 function headers(store, env) {

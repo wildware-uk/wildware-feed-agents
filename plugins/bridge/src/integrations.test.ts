@@ -197,9 +197,10 @@ describe.skipIf(instructions === null)('the MCP server instructions', () => {
 	it('teach plain /mcp clients to find tools, where {{tools}} stands, naming the everyday calls', async () => {
 		expect(text).toContain('{{tools}}');
 		const discovery = (await serverFile(DISCOVERY_INSTRUCTIONS)) ?? '';
-		for (const call of ['list_tools', 'describe_tools', 'call_tool({name, arguments})', 'acknowledge {', 'post_message {', 'get_messages {', 'request_input {', 'await_request {', 'heartbeat {', 'read_doc {']) {
+		for (const call of ['list_tools', 'describe_tools', 'call_tool({name, arguments})', 'acknowledge {', 'post_message {', 'get_messages {', 'request_input {', 'heartbeat {', 'read_doc {']) {
 			expect(discovery).toContain(call);
 		}
+		expect(discovery).not.toContain('await_request');
 	});
 
 	it('still start the way the parity suite expects', () => {

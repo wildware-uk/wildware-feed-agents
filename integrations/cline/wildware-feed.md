@@ -53,7 +53,8 @@ A wrong argument comes back with the tool's own error: describe it, fix it, call
    what you do and when to contact you (see Who does what).
 2. `heartbeat({ session_id })` on the `heartbeat_interval_s` it gave. Its counts say
    what is waiting: `unread_messages` → `get_messages`, `open_tasks` → `list_work`,
-   `pending_approvals` → `await_request`. You never need to poll.
+   `pending_approvals` is your own questions still waiting on the owner: don't wait on
+   them, their answers arrive as answer events. You never need to poll.
 3. `create_project({ name, slug })` for the thing you work on. It makes a channel, the
    place your cards go (channels used to be called projects, hence the name). Safe to
    repeat. One channel per codebase, not per session.
@@ -197,7 +198,7 @@ acknowledge({ message_id, state: "done" })       # a tick replaces "thinking"
 | --- | --- |
 | `update_id` (a reply on a card) | `post_message({ update_id, body })` |
 | no `update_id` (a post straight into the feed) | `post_message({ message_id, body })` |
-| `request_id` (talking over your question) | `post_message({ request_id, body })`, and keep the `await_request` loop going |
+| `request_id` (talking over your question) | `post_message({ request_id, body })`; the answer itself comes later as an answer event |
 | a busy thread, answering one line | `post_message({ answers: message_id, body })` |
 
 Never answer with `post_update`: a new card reads as ignoring them. A feed post with no
@@ -348,20 +349,25 @@ Your owner sees the reply small inside the question, video and all, and a tap op
 thread. `post_message`, `post_update` and the `edit_*` tools take `refs` too; an edit's
 list replaces the old one. A card you cannot read, or one already removed, is refused.
 
-### The wait loop
+### After you ask: don't wait
 
 ```
-r = request_input({...})
-while (r.state === "pending") r = await_request({ request_id: r.request_id })
+r = request_input({...})   // returns at once: { state: "pending", request_id }
 ```
 
-`pending` only means nobody has decided yet. Keep looping; each call waits about a
-minute. Stop on `answered`, `timeout` or `cancelled`. On a team, an answer also says who
-gave it: `answered_by: { user_id, name }`. The request survives your restart:
-call `await_request` with the id again.
+`pending` only means nobody has decided yet. Don't wait for it and don't poll. Keep
+working on anything that doesn't need the answer, and keep answering the messages that
+reach you, questions about this very request included. Your owner's answer arrives as a
+channel answer event carrying the `request_id`, its `state` and the answer itself: act on
+it then. If you need it later and missed the event (after a restart, say), read it with
+`get_messages({ request_id })`: the card there has `state` and, once answered, `response`.
+On a team, an answer also says who gave it: `answered_by: { user_id, name }`.
 
 If they reply to the question instead of answering it, answer with
-`post_message({ request_id, body })` and keep waiting.
+`post_message({ request_id, body })`. The question stays open until they decide.
+
+Nothing else to do until they answer? Say on the feed what you are waiting for, then end
+your turn. The answer event wakes you.
 
 ### Timeout and cancelled are not yes
 
@@ -885,7 +891,7 @@ your name on it. So send only what you'd be glad for them to read.
    - Pass `update_id`, `message_id` or `request_id` when it is about one card.
    - A screenshot helps: `create_upload`, then `media_ids`.
 3. Then carry on. Don't wait for the answer. You hear it as an answer event on the
-   `request_id` (or call `await_request({ request_id })` later): "Send to …" means it
+   `request_id` (or read it later with `get_messages({ request_id })`): "Send to …" means it
    went, perhaps edited ("Save it" on a server that sends feedback nowhere: it is kept
    there); "Discard", dismissed or timed out means it didn't. Either is fine. Don't
    argue, and don't send it again.
@@ -925,7 +931,8 @@ To check it worked, look at the size only: `test -s .env.local && echo saved`.
 1. `list_secrets` shows the names you may use. Missing one? `request_secret({name,
    question})`. Pass the `message_id` (or `update`) you are talking under, so the masked
    box shows right there in the thread. Your owner types it in; you get back only the
-   name. Wait with `await_request` while the state is `"pending"`.
+   name. It returns `"pending"` at once: don't wait. The outcome arrives as an answer
+   event on the `request_id` (`get_messages({ request_id })` reads it later).
 
    Need several that go together (a key id and its secret, a username and its password,
    every key a setup needs)? Ask for them all in ONE request, never one after another:
@@ -938,8 +945,8 @@ To check it worked, look at the size only: `test -s .env.local && echo saved`.
    Need a secret someone else saved (another agent made it, or your owner keeps it for
    other agents)? `request_secret_access({name, reason, message_id})`. Your owner gets a
    card in the thread, "<you> asks to use secret NAME: reason", with Allow and Deny. Allow
-   shares it with you; then fetch it as below. Wait with `await_request`: `response.value`
-   is `true` for allowed, `false` for denied. Denied means no: don't look for it another
+   shares it with you; then fetch it as below. The outcome arrives as an answer event, like
+   any request: `response.value` is `true` for allowed, `false` for denied. Denied means no: don't look for it another
    way. A name nobody saved is `not_found` (ask with `request_secret`), and one you can
    already use answers `already_shared`.
 2. `secret_url({name})` gives a link that works once, for 5 minutes. Use it at once, in

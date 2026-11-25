@@ -9,6 +9,7 @@ import {
 	DENIED_ON_DASHBOARD,
 	DENY,
 	Decided,
+	POLL_MS,
 	canonical,
 	permissionPrompt,
 	promptsOn,
@@ -41,7 +42,7 @@ function dashboard(handlers: Record<string, Handler>) {
 			calls.push({ name, args });
 			const handler = handlers[name];
 			if (!handler) return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, error: { message: `no ${name}` } }), { status: 200 });
-			// A parked await_request still takes a moment of the clock.
+			// A call still takes a moment of the clock.
 			t += 1_000;
 			const result = await handler(args, init.signal ?? undefined);
 			return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result: { structuredContent: result } }), { status: 200 });
@@ -50,7 +51,9 @@ function dashboard(handlers: Record<string, Handler>) {
 	return { calls, io, asked: () => calls.filter((c) => c.name === 'request_input').map((c) => c.args), tools: () => calls.map((c) => c.name) };
 }
 
-const pending = (id = 'R1') => ({ state: 'pending', request_id: id, poll_after_ms: 1000 });
+const pending = (id = 'R1') => ({ state: 'pending', request_id: id });
+/** get_messages({request_id}) answering with the question's card, as [handler] says it stands. */
+const card = (handler: Handler): Handler => async (args, signal) => ({ thread: { kind: 'request', id: args.request_id, card: await handler(args, signal) } });
 const answered = (value: unknown, extra: Record<string, unknown> = {}) => ({ state: 'answered', request_id: 'R1', response: { kind: 'buttons', value }, ...extra });
 
 const bash = (command: string, extra: Partial<HookInput> = {}): HookInput => ({
@@ -66,7 +69,7 @@ const never = { decided: () => false, graceMs: 0 };
 
 describe('the permission prompt', () => {
 	it('asks with Allow and Deny, naming the agent, the folder and the command, and allows on Allow', async () => {
-		const dash = dashboard({ request_input: () => pending(), await_request: () => answered(ALLOW) });
+		const dash = dashboard({ request_input: () => pending(), get_messages: card(() => answered(ALLOW)) });
 		const out = await permissionPrompt(bash('npm test'), D, never, dash.io);
 		expect(out).toEqual({ hookSpecificOutput: { hookEventName: 'PermissionRequest', decision: { behavior: 'allow' } } });
 		const [asked] = dash.asked();
@@ -85,7 +88,7 @@ describe('the permission prompt', () => {
 	});
 
 	it('denies on Deny, telling Claude it was the owner on the dashboard', async () => {
-		const dash = dashboard({ request_input: () => pending(), await_request: () => answered(DENY, { answered_by: { user_id: 'U1', name: 'Sam' } }) });
+		const dash = dashboard({ request_input: () => pending(), get_messages: card(() => answered(DENY, { answered_by: { user_id: 'U1', name: 'Sam' } })) });
 		const out = await permissionPrompt(bash('rm -rf build'), D, never, dash.io);
 		const decision = out!.hookSpecificOutput.decision;
 		expect(decision.behavior).toBe('deny');
@@ -96,30 +99,36 @@ describe('the permission prompt', () => {
 	it('offers Always allow only for a rule Claude Code suggested, and applies just that rule', async () => {
 		const rule = { type: 'addRules', behavior: 'allow', destination: 'localSettings', rules: [{ toolName: 'Bash', ruleContent: 'npm test:*' }] };
 		const suggestions = [{ type: 'setMode', mode: 'acceptEdits', destination: 'session' }, rule];
-		const dash = dashboard({ request_input: () => pending(), await_request: () => answered(ALWAYS) });
+		const dash = dashboard({ request_input: () => pending(), get_messages: card(() => answered(ALWAYS)) });
 		const out = await permissionPrompt(bash('npm test', { permission_suggestions: suggestions }), D, never, dash.io);
 		expect(dash.asked()[0].options).toEqual([ALLOW, ALWAYS, DENY]);
 		expect(out!.hookSpecificOutput.decision).toEqual({ behavior: 'allow', updatedPermissions: [rule] });
 
-		const none = dashboard({ request_input: () => pending(), await_request: () => answered(ALLOW) });
+		const none = dashboard({ request_input: () => pending(), get_messages: card(() => answered(ALLOW)) });
 		await permissionPrompt(bash('ls', { permission_suggestions: [{ type: 'addDirectories', destination: 'session' }] }), D, never, none.io);
 		expect(none.asked()[0].options).toEqual([ALLOW, DENY]);
 	});
 
 	it('says Always allow for a call_tool rule covers every tool on that server', async () => {
 		const rule = { type: 'addRules', behavior: 'allow', destination: 'localSettings', rules: [{ toolName: 'mcp__plugin_wildware-feed_agent-dashboard__call_tool' }] };
-		const dash = dashboard({ request_input: () => pending(), await_request: () => answered(ALLOW) });
+		const dash = dashboard({ request_input: () => pending(), get_messages: card(() => answered(ALLOW)) });
 		const input = { ...bash(''), tool_name: 'mcp__plugin_wildware-feed_agent-dashboard__call_tool', tool_input: { name: 'post_message', arguments: { body: 'x' } }, permission_suggestions: [rule] };
 		await permissionPrompt(input, D, never, dash.io);
 		expect(dash.asked()[0].detail).toContain('mcp__plugin_wildware-feed_agent-dashboard__call_tool (every tool on that server)');
 	});
 
 	it('leaves it to the terminal when nobody answers in time, and takes the question down', async () => {
-		const dash = dashboard({ request_input: () => pending(), await_request: () => pending(), withdraw_request: () => ({ state: 'withdrawn' }) });
+		const dash = dashboard({ request_input: () => pending(), get_messages: card(() => pending()), withdraw_request: () => ({ state: 'withdrawn' }) });
 		const out = await permissionPrompt(bash('npm publish'), D, { ...never, waitMs: 60_000 }, dash.io);
 		expect(out).toBeNull();
 		expect(dash.tools()).toContain('withdraw_request');
 		expect(dash.asked()[0].timeout_s).toBe(60);
+		// It reads the question back now and then, never waiting on the dashboard: no await_request.
+		expect(dash.tools()).not.toContain('await_request');
+		const reads = dash.calls.filter((c) => c.name === 'get_messages');
+		expect(reads.length).toBeGreaterThan(1);
+		expect(reads.length).toBeLessThanOrEqual(60_000 / POLL_MS);
+		expect(reads[0].args).toEqual({ request_id: 'R1' });
 	});
 
 	it.each([
@@ -130,7 +139,7 @@ describe('the permission prompt', () => {
 		['answered by an agent id', answered(ALLOW, { answered_by: { user_id: 'agent:A2' } })],
 		['answered with something unknown', answered('Sure')]
 	])('never allows a request that was %s', async (_, end) => {
-		const dash = dashboard({ request_input: () => pending(), await_request: () => end, withdraw_request: () => ({}) });
+		const dash = dashboard({ request_input: () => pending(), get_messages: card(() => end), withdraw_request: () => ({}) });
 		expect(await permissionPrompt(bash('npm publish'), D, never, dash.io)).toBeNull();
 	});
 
@@ -153,7 +162,7 @@ describe('the permission prompt', () => {
 		let terminal = false;
 		const dash = dashboard({
 			request_input: () => pending(),
-			await_request: () => ((terminal = true), pending()),
+			get_messages: card(() => ((terminal = true), pending())),
 			withdraw_request: (args) => ({ request_id: args.request_id, state: 'withdrawn' })
 		});
 		const out = await permissionPrompt(bash('ls'), D, { decided: () => terminal, graceMs: 0 }, dash.io);
@@ -251,10 +260,11 @@ describe('questions', () => {
 		let n = 0;
 		const dash = dashboard({
 			request_input: () => pending(`R${++n}`),
-			await_request: (args) =>
+			get_messages: card((args) =>
 				args.request_id === 'R1'
 					? { state: 'answered', response: { kind: 'choice', value: 'SQLite' } }
 					: { state: 'answered', response: { kind: 'multi_choice', value: ['iOS', 'Web'] } }
+			)
 		});
 		const out = await permissionPrompt(input, D, never, dash.io);
 		const [one, two] = dash.asked();
@@ -272,7 +282,7 @@ describe('questions', () => {
 		let n = 0;
 		const dash = dashboard({
 			request_input: () => pending(`R${++n}`),
-			await_request: (args) => (args.request_id === 'R1' ? { state: 'cancelled' } : pending('R2')),
+			get_messages: card((args) => (args.request_id === 'R1' ? { state: 'cancelled' } : pending('R2'))),
 			withdraw_request: () => ({ state: 'withdrawn' })
 		});
 		expect(await permissionPrompt(input, D, never, dash.io)).toBeNull();

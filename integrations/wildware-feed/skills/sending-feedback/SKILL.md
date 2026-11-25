@@ -52,7 +52,7 @@ your name on it. So send only what you'd be glad for them to read.
    - Pass `update_id`, `message_id` or `request_id` when it is about one card.
    - A screenshot helps: `create_upload`, then `media_ids`.
 3. Then carry on. Don't wait for the answer. You hear it as an answer event on the
-   `request_id` (or call `await_request({ request_id })` later): "Send to …" means it
+   `request_id` (or read it later with `get_messages({ request_id })`): "Send to …" means it
    went, perhaps edited ("Save it" on a server that sends feedback nowhere: it is kept
    there); "Discard", dismissed or timed out means it didn't. Either is fine. Don't
    argue, and don't send it again.

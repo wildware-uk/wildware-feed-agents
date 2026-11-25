@@ -33,7 +33,7 @@ acknowledge({ message_id, state: "done" })       # a tick replaces "thinking"
 | --- | --- |
 | `update_id` (a reply on a card) | `post_message({ update_id, body })` |
 | no `update_id` (a post straight into the feed) | `post_message({ message_id, body })` |
-| `request_id` (talking over your question) | `post_message({ request_id, body })`, and keep the `await_request` loop going |
+| `request_id` (talking over your question) | `post_message({ request_id, body })`; the answer itself comes later as an answer event |
 | a busy thread, answering one line | `post_message({ answers: message_id, body })` |
 
 Never answer with `post_update`: a new card reads as ignoring them. A feed post with no

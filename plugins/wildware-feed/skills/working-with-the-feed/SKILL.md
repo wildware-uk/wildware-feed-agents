@@ -50,7 +50,8 @@ A wrong argument comes back with the tool's own error: describe it, fix it, call
    what you do and when to contact you (see Who does what).
 2. `heartbeat({ session_id })` on the `heartbeat_interval_s` it gave. Its counts say
    what is waiting: `unread_messages` → `get_messages`, `open_tasks` → `list_work`,
-   `pending_approvals` → `await_request`. You never need to poll.
+   `pending_approvals` is your own questions still waiting on the owner: don't wait on
+   them, their answers arrive as answer events. You never need to poll.
 3. `create_project({ name, slug })` for the thing you work on. It makes a channel, the
    place your cards go (channels used to be called projects, hence the name). Safe to
    repeat. One channel per codebase, not per session.

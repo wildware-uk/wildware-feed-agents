@@ -28,7 +28,8 @@ To check it worked, look at the size only: `test -s .env.local && echo saved`.
 1. `list_secrets` shows the names you may use. Missing one? `request_secret({name,
    question})`. Pass the `message_id` (or `update`) you are talking under, so the masked
    box shows right there in the thread. Your owner types it in; you get back only the
-   name. Wait with `await_request` while the state is `"pending"`.
+   name. It returns `"pending"` at once: don't wait. The outcome arrives as an answer
+   event on the `request_id` (`get_messages({ request_id })` reads it later).
 
    Need several that go together (a key id and its secret, a username and its password,
    every key a setup needs)? Ask for them all in ONE request, never one after another:
@@ -41,8 +42,8 @@ To check it worked, look at the size only: `test -s .env.local && echo saved`.
    Need a secret someone else saved (another agent made it, or your owner keeps it for
    other agents)? `request_secret_access({name, reason, message_id})`. Your owner gets a
    card in the thread, "<you> asks to use secret NAME: reason", with Allow and Deny. Allow
-   shares it with you; then fetch it as below. Wait with `await_request`: `response.value`
-   is `true` for allowed, `false` for denied. Denied means no: don't look for it another
+   shares it with you; then fetch it as below. The outcome arrives as an answer event, like
+   any request: `response.value` is `true` for allowed, `false` for denied. Denied means no: don't look for it another
    way. A name nobody saved is `not_found` (ask with `request_secret`), and one you can
    already use answers `already_shared`.
 2. `secret_url({name})` gives a link that works once, for 5 minutes. Use it at once, in

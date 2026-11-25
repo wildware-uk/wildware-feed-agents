@@ -30,6 +30,9 @@ describe('the SessionStart hook', () => {
 			expect(said).toContain(word);
 		}
 		expect(said.split('\n').length).toBeLessThanOrEqual(6);
+		// Asking never means waiting: the answer comes as a channel event.
+		expect(said).toContain('carry on');
+		expect(said).not.toContain('await_request');
 		expect(said).not.toContain('paired-token');
 	});
 

@@ -117,7 +117,9 @@ describe('the channel it declares itself to be', () => {
 		expect(INSTRUCTIONS).toContain('set_status');
 		expect(INSTRUCTIONS).not.toContain('list_tasks');
 		expect(INSTRUCTIONS).not.toContain('claim_task');
-		expect(INSTRUCTIONS).toContain('await_request');
+		// Nothing waits on a question any more: the answer is an event, and get_messages reads it.
+		expect(INSTRUCTIONS).not.toContain('await_request');
+		expect(INSTRUCTIONS).toContain('get_messages({request_id})');
 	});
 
 	it('does not promise a source attribute it does not control', () => {
@@ -844,8 +846,8 @@ describe('a message answering another one', () => {
 	/**
 	 * A reply on a question the agent is waiting on (migration 032).
 	 *
-	 * It is parked in `await_request`, so "your owner said X" without saying what
-	 * it is about is how a discussion gets answered as a new topic.
+	 * "Your owner said X" without saying it is about the question still open is how
+	 * a discussion gets answered as a new topic.
 	 */
 	it('says when the owner is talking over a question rather than answering it', async () => {
 		const [content, meta] = await notified({ body: 'why main?', request_id: 'r1' });
