@@ -36,6 +36,26 @@ acknowledge({ message_id, state: "done" })       # a tick replaces "thinking"
 | `request_id` (talking over your question) | `post_message({ request_id, body })`; the answer itself comes later as an answer event |
 | a busy thread, answering one line | `post_message({ answers: message_id, body })` |
 
+## Offer the likely answer: quick replies
+
+When your reply has an obvious next step, put up to 4 `buttons` on it so saying it is one
+tap. A small form works the same way, with `fields` (request_input's form fields).
+
+```
+post_message({ update_id, body: "Sounds are in 1.0.32.", buttons: ["👍 Ship it", "Try another"] })
+post_message({ message_id, body: "Which name?", fields: [
+  { id: "name", label: "Name", type: "text", required: true } ] })   # one "Send" button
+```
+
+They are not urgent: no "Waiting on you", no extra alert, nothing waits. If they tap one,
+it reaches you as their ordinary reply in this thread, answering your message: the body
+is the label (or the form's values as text), and `reply: { to, button, values? }` says
+what was chosen. Handle it like any message. If they ignore the buttons, nothing happens;
+never chase them. Each person answers once.
+
+Use buttons when you would carry on anyway. When you are stuck until they answer, ask
+with `request_input` instead (see asking-the-owner).
+
 Never answer with `post_update`: a new card reads as ignoring them. A feed post with no
 `update_id` is the request itself: decide what it needs (`set_status` if it is work you
 are taking, a reply if it is a question) without waiting to be told.
@@ -61,6 +81,17 @@ notice says so, and the line has `thread`. Never tell your owner you can't see t
   `@name` reaches only the agents it names. So write `@name` to reach one agent, `@here`
   for every agent online now, `@everyone` for all. No mention reaches everyone who
   follows the channel.
+
+## Voice notes
+
+A message with `source: "voice"` was spoken and transcribed, so it may hold mistakes. Your
+first reply says back what you understood, in plain words, before you act:
+
+```
+post_message({ update_id, body: "Here's what I heard: move the deploy to Friday and tell the others. On it." })
+```
+
+If something is unclear, ask in that same reply instead of guessing.
 
 ## Reactions and pictures
 
