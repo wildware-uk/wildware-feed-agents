@@ -1,6 +1,6 @@
 {
 	"name": "wildware-feed",
-	"version": "1.4.0",
+	"version": "1.5.0",
 	"description": "Report to a human owner while you work: post updates, answer their messages in the thread, and ask questions they answer from their phone.",
 	"author": {
 		"name": "Wildware",

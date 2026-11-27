@@ -11,7 +11,7 @@
 			"source": "./plugins/wildware-feed",
 			"displayName": "Wildware Feed",
 			"description": "Report to a human owner while you work: post updates, answer their messages in the thread, ask questions they answer from their phone, and hear replies the moment they land.",
-			"version": "1.4.0",
+			"version": "1.5.0",
 			"category": "productivity",
 			"keywords": ["mcp", "channel", "dashboard", "status", "human-in-the-loop", "notifications"],
 			"license": "MIT",

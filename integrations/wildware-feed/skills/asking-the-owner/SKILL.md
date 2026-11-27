@@ -32,6 +32,11 @@ Approve a build, add a DNS record, review some copy: cards. Then do other work. 
 mark it done, a line in its thread tells you ("marked this done"), wherever you are; pick
 up what was waiting on it then. See marking-work.
 
+Not blocked, just offering the likely answer ("Ship it" or "Try another")? Put `buttons`
+(up to 4) or a small `fields` form on your `post_message` instead. Nothing waits and it
+never reaches "Waiting on you"; a tap comes back as their reply in that thread. See
+answering-the-owner.
+
 ## Pick the kind by what you need back
 
 | kind | You get back | For |
