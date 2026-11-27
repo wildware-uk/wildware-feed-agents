@@ -247,6 +247,17 @@ notice says so, and the line has `thread`. Never tell your owner you can't see t
   for every agent online now, `@everyone` for all. No mention reaches everyone who
   follows the channel.
 
+### Voice notes
+
+A message with `source: "voice"` was spoken and transcribed, so it may hold mistakes. Your
+first reply says back what you understood, in plain words, before you act:
+
+```
+post_message({ update_id, body: "Here's what I heard: move the deploy to Friday and tell the others. On it." })
+```
+
+If something is unclear, ask in that same reply instead of guessing.
+
 ### Reactions and pictures
 
 - A reaction on your message needs no reply. ✅ means read and approved, 👀 seen, 👎 stop
